@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>WLED Painter — Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@300;400;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg:      #0a0a0f;
+    --surface: #12121a;
+    --panel:   #1a1a26;
+    --border:  #2a2a3d;
+    --accent:  #7b61ff;
+    --glow:    #7b61ff66;
+    --text:    #e8e8f0;
+    --muted:   #6b6b8a;
+    --success: #4ecca3;
+    --error:   #ff6b6b;
+    --warn:    #ffd166;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Space Grotesk', sans-serif;
+    background: var(--bg); color: var(--text);
+    min-height: 100vh; display: flex; flex-direction: column;
+  }
+
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 24px; border-bottom: 1px solid var(--border);
+    background: var(--surface); position: sticky; top: 0; z-index: 100;
+  }
+  .logo {
+    font-family: 'JetBrains Mono', monospace; font-weight: 700;
+    font-size: 1.1rem; letter-spacing: 0.04em;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .admin-badge {
+    font-family: 'JetBrains Mono', monospace; font-size: 0.65rem;
+    background: #ff6b6b22; border: 1px solid var(--error);
+    color: var(--error); padding: 3px 10px; border-radius: 12px;
+    letter-spacing: 0.08em;
+  }
+  .header-right { display: flex; align-items: center; gap: 12px; }
+  .go-public {
+    font-family: 'JetBrains Mono', monospace; font-size: 0.72rem;
+    color: var(--muted); text-decoration: none; padding: 5px 10px;
+    border: 1px solid var(--border); border-radius: 6px; transition: all 0.15s;
+  }
+  .go-public:hover { color: var(--text); border-color: var(--muted); }
+
+  /* Main layout */
+  main {
+    flex: 1; display: flex; align-items: flex-start;
+    justify-content: center; padding: 40px 24px; gap: 24px; flex-wrap: wrap;
+  }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 24px; width: 100%; max-width: 460px;
+  }
+  .card-title {
+    font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;
+    font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em;
+    color: var(--muted); margin-bottom: 20px;
+    padding-bottom: 12px; border-bottom: 1px solid var(--border);
+  }
+
+  /* Form elements */
+  .field { margin-bottom: 16px; }
+  label { font-size: 0.8rem; color: var(--muted); display: block; margin-bottom: 5px; }
+  input[type="text"], input[type="number"] {
+    width: 100%; background: var(--panel); border: 1px solid var(--border);
+    color: var(--text); border-radius: 6px; padding: 9px 12px;
+    font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  input[type="text"]:focus, input[type="number"]:focus {
+    border-color: var(--accent); box-shadow: 0 0 0 2px var(--glow);
+  }
+  .input-row { display: flex; gap: 10px; }
+  .input-row > .field { flex: 1; margin-bottom: 0; }
+  .checkbox-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 0; border-top: 1px solid var(--border); margin-top: 4px;
+  }
+  .checkbox-row label { margin: 0; color: var(--text); font-size: 0.85rem; }
+  input[type="checkbox"] { accent-color: var(--accent); width: 16px; height: 16px; cursor: pointer; }
+
+  /* Buttons */
+  button {
+    font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 0.85rem;
+    border: none; border-radius: 8px; cursor: pointer; transition: all 0.15s; padding: 10px 16px;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: #9580ff; box-shadow: 0 0 14px var(--glow); }
+  .btn-secondary { background: var(--panel); color: var(--text); border: 1px solid var(--border); }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-danger { background: transparent; color: var(--error); border: 1px solid var(--error); }
+  .btn-danger:hover { background: #ff6b6b22; }
+  .btn-success { background: var(--success); color: #0a0a0f; }
+  .btn-success:hover { opacity: 0.85; }
+  .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .btn-row button { flex: 1; min-width: 100px; }
+
+  /* Detected info box */
+  .info-box {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 8px; padding: 14px 16px; margin-top: 14px;
+    font-family: 'JetBrains Mono', monospace; font-size: 0.78rem;
+    display: none;
+  }
+  .info-box.visible { display: block; }
+  .info-box.ok    { border-color: var(--success); }
+  .info-box.error { border-color: var(--error); color: var(--error); }
+  .info-row { display: flex; justify-content: space-between; padding: 4px 0; }
+  .info-row + .info-row { border-top: 1px solid var(--border); }
+  .info-key  { color: var(--muted); }
+  .info-val  { color: var(--text); font-weight: 600; }
+  .info-val.matrix { color: var(--accent); }
+  .info-val.strip  { color: var(--success); }
+
+  /* Brightness range */
+  input[type="range"] {
+    -webkit-appearance: none; width: 100%; height: 4px;
+    background: var(--border); border-radius: 2px; outline: none; margin: 8px 0;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 16px; height: 16px;
+    border-radius: 50%; background: var(--accent); cursor: pointer; box-shadow: 0 0 8px var(--glow);
+  }
+  .val-label { font-family:'JetBrains Mono',monospace; font-size:0.75rem; color:var(--accent); float:right; }
+
+  /* Saved indicator */
+  .saved-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-family: 'JetBrains Mono', monospace; font-size: 0.7rem;
+    color: var(--success); opacity: 0;
+    transition: opacity 0.4s;
+  }
+  .saved-pill.show { opacity: 1; }
+
+  /* Toast */
+  #toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px 16px;
+    font-family: 'JetBrains Mono', monospace; font-size: 0.75rem;
+    transform: translateY(80px); opacity: 0;
+    transition: all 0.3s cubic-bezier(.34,1.56,.64,1); z-index: 999;
+  }
+  #toast.show  { transform: translateY(0); opacity: 1; }
+  #toast.ok    { border-color: var(--success); color: var(--success); }
+  #toast.error { border-color: var(--error);   color: var(--error); }
+  #toast.warn  { border-color: var(--warn);    color: var(--warn); }
+
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">
+    ⚙ WLED Admin
+    <span class="admin-badge">ADMIN</span>
+  </div>
+  <div class="header-right">
+    <a href="/" class="go-public">← Public UI</a>
+  </div>
+</header>
+
+<main>
+  <!-- ── Connection card ── -->
+  <div class="card">
+    <div class="card-title">⚡ WLED Connection</div>
+
+    <div class="field">
+      <label>WLED IP address</label>
+      <input type="text" id="wled-ip" placeholder="192.168.1.50" />
+    </div>
+
+    <div class="btn-row">
+      <button class="btn-primary" onclick="pingAndDetect()">Connect &amp; Auto-Detect</button>
+    </div>
+
+    <div class="info-box" id="info-box">
+      <div class="info-row"><span class="info-key">Device</span><span class="info-val" id="det-name">—</span></div>
+      <div class="info-row"><span class="info-key">Mode</span><span class="info-val" id="det-mode">—</span></div>
+      <div class="info-row"><span class="info-key">Dimensions</span><span class="info-val" id="det-dims">—</span></div>
+      <div class="info-row"><span class="info-key">LED count</span><span class="info-val" id="det-count">—</span></div>
+      <div class="info-row"><span class="info-key">WLED version</span><span class="info-val" id="det-ver">—</span></div>
+    </div>
+  </div>
+
+  <!-- ── Grid & Display card ── -->
+  <div class="card">
+    <div class="card-title">◫ Grid &amp; Display</div>
+
+    <div id="matrix-note" style="display:none;margin-bottom:14px;padding:10px 12px;
+      background:#7b61ff11;border:1px solid var(--accent);border-radius:6px;
+      font-size:0.78rem;color:var(--accent)">
+      ✓ Matrix dimensions were auto-detected from WLED. You can override them below.
+    </div>
+
+    <div class="input-row">
+      <div class="field">
+        <label>Columns (W)</label>
+        <input type="number" id="grid-cols" value="16" min="1" max="256" />
+      </div>
+      <div class="field">
+        <label>Rows (H)</label>
+        <input type="number" id="grid-rows" value="1" min="1" max="256" />
+      </div>
+    </div>
+
+    <div class="checkbox-row">
+      <input type="checkbox" id="serpentine" />
+      <label for="serpentine">Serpentine wiring (odd rows run right→left)</label>
+    </div>
+
+    <div style="margin-top:20px">
+      <label>Default brightness <span class="val-label" id="bri-label">128</span></label>
+      <input type="range" id="brightness" min="0" max="255" value="128"
+        oninput="document.getElementById('bri-label').textContent=this.value" />
+    </div>
+
+    <div style="margin-top:20px" class="btn-row">
+      <button class="btn-success" onclick="saveConfig()">Save Config</button>
+      <span class="saved-pill" id="saved-pill">✓ saved</span>
+    </div>
+  </div>
+
+  <!-- ── Interface card ── -->
+  <div class="card" style="max-width:460px">
+    <div class="card-title">🖥 Default View</div>
+    <p style="font-size:0.82rem;color:var(--muted);margin-bottom:16px">
+      Choose which painter opens when visitors go to <code style="font-family:'JetBrains Mono',monospace;font-size:0.8rem;color:var(--text)">/</code>.
+      Both views are always available at <code style="font-family:'JetBrains Mono',monospace;font-size:0.8rem;color:var(--text)">/desktop</code> and <code style="font-family:'JetBrains Mono',monospace;font-size:0.8rem;color:var(--text)">/tablet</code>.
+    </p>
+    <div class="btn-row">
+      <button id="btn-default-desktop" class="btn-primary"   onclick="setDefaultMode('desktop')">Desktop</button>
+      <button id="btn-default-tablet"  class="btn-secondary" onclick="setDefaultMode('tablet')">Tablet / Mobile</button>
+    </div>
+  </div>
+
+  <!-- ── Danger card ── -->
+  <div class="card" style="max-width:460px">
+    <div class="card-title">🗑 Strip Control</div>
+    <p style="font-size:0.82rem;color:var(--muted);margin-bottom:16px">
+      Send a blank frame to turn off all LEDs on the connected strip.
+    </p>
+    <button class="btn-danger" onclick="clearWled()">Clear WLED Strip (all off)</button>
+  </div>
+</main>
+
+<div id="toast"></div>
+
+<script>
+// ── Boot ──────────────────────────────────────────────────────────────────────
+window.addEventListener("DOMContentLoaded", loadCurrentConfig);
+
+async function loadCurrentConfig() {
+  try {
+    const res  = await fetch("/api/config");
+    const data = await res.json();
+    if (!data.ok) return;
+    const c = data.config;
+    document.getElementById("grid-cols").value  = c.cols       ?? 16;
+    document.getElementById("grid-rows").value  = c.rows       ?? 1;
+    document.getElementById("serpentine").checked = c.serpentine ?? false;
+    document.getElementById("brightness").value = c.brightness  ?? 128;
+    document.getElementById("bri-label").textContent = c.brightness ?? 128;
+
+    updateDefaultModeUI(c.defaultMode ?? "desktop");
+
+    if (c.deviceName) {
+      // show a read-only info summary from saved config
+      showDetected({
+        name:      c.deviceName,
+        isMatrix:  c.isMatrix,
+        cols:      c.cols,
+        rows:      c.rows,
+        ledCount:  c.ledCount,
+        ver:       null,
+      });
+    }
+  } catch (e) {
+    toast("Could not load config from server", "error");
+  }
+}
+
+function updateDefaultModeUI(mode) {
+  document.getElementById("btn-default-desktop").className = mode === "desktop" ? "btn-primary" : "btn-secondary";
+  document.getElementById("btn-default-tablet").className  = mode === "tablet"  ? "btn-primary" : "btn-secondary";
+}
+
+async function setDefaultMode(mode) {
+  try {
+    const res  = await fetch("/api/config", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ defaultMode: mode }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      updateDefaultModeUI(mode);
+      toast(`Default view set to ${mode} ✓`, "ok");
+    } else {
+      toast(data.error, "error");
+    }
+  } catch (e) {
+    toast("Could not save: " + e.message, "error");
+  }
+}
+
+// ── Connect & auto-detect ─────────────────────────────────────────────────────
+async function pingAndDetect() {
+  const ip = document.getElementById("wled-ip").value.trim();
+  if (!ip) { toast("Enter a WLED IP address", "warn"); return; }
+
+  toast("Connecting…", "ok");
+
+  try {
+    const res  = await fetch(`/api/ping?wledIp=${encodeURIComponent(ip)}`);
+    const data = await res.json();
+
+    if (!data.ok) {
+      toast(data.error, "error");
+      showInfoBox("error", data.error);
+      return;
+    }
+
+    const d = data.detected;
+    const info = data.info;
+
+    // Update grid fields
+    document.getElementById("grid-cols").value = d.cols;
+    document.getElementById("grid-rows").value = d.rows;
+
+    if (d.isMatrix) {
+      document.getElementById("matrix-note").style.display = "block";
+    }
+
+    showDetected({
+      name:     info?.name ?? ip,
+      isMatrix: d.isMatrix,
+      cols:     d.cols,
+      rows:     d.rows,
+      ledCount: d.ledCount,
+      ver:      info?.ver ?? null,
+    });
+
+    toast(`Connected: ${info?.name ?? ip}`, "ok");
+  } catch (e) {
+    toast("Backend unreachable: " + e.message, "error");
+  }
+}
+
+function showDetected({ name, isMatrix, cols, rows, ledCount, ver }) {
+  const box = document.getElementById("info-box");
+  box.className = "info-box visible ok";
+
+  document.getElementById("det-name").textContent  = name || "—";
+
+  const modeEl = document.getElementById("det-mode");
+  modeEl.textContent  = isMatrix ? "2D Matrix" : "1D Strip";
+  modeEl.className    = "info-val " + (isMatrix ? "matrix" : "strip");
+
+  document.getElementById("det-dims").textContent  = isMatrix ? `${cols} × ${rows}` : `${cols} LEDs × 1`;
+  document.getElementById("det-count").textContent = ledCount ?? "—";
+  document.getElementById("det-ver").textContent   = ver ?? "—";
+}
+
+function showInfoBox(type, msg) {
+  const box = document.getElementById("info-box");
+  box.className = "info-box visible " + type;
+  box.innerHTML = `<span style="color:var(--error)">${msg}</span>`;
+}
+
+// ── Save config ───────────────────────────────────────────────────────────────
+async function saveConfig() {
+  const ip = document.getElementById("wled-ip").value.trim();
+  const payload = {
+    cols:       parseInt(document.getElementById("grid-cols").value),
+    rows:       parseInt(document.getElementById("grid-rows").value),
+    serpentine: document.getElementById("serpentine").checked,
+    brightness: parseInt(document.getElementById("brightness").value),
+    isMatrix:   parseInt(document.getElementById("grid-rows").value) > 1,
+  };
+  if (ip) payload.wledIp = ip;
+
+  try {
+    const res  = await fetch("/api/config", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      const pill = document.getElementById("saved-pill");
+      pill.classList.add("show");
+      setTimeout(() => pill.classList.remove("show"), 2000);
+      toast("Config saved ✓", "ok");
+    } else {
+      toast(data.error, "error");
+    }
+  } catch (e) {
+    toast("Could not save: " + e.message, "error");
+  }
+}
+
+// ── Clear strip ───────────────────────────────────────────────────────────────
+async function clearWled() {
+  try {
+    const res  = await fetch("/api/clear", { method:"POST", headers:{"Content-Type":"application/json"}, body:"{}" });
+    const data = await res.json();
+    if (data.ok) toast("Strip cleared ✓", "ok");
+    else         toast(data.error, "error");
+  } catch (e) {
+    toast("Backend unreachable: " + e.message, "error");
+  }
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+let toastTimer;
+function toast(msg, type="ok") {
+  const el = document.getElementById("toast");
+  el.textContent = msg; el.className = "show " + type;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = ""; }, 3000);
+}
+</script>
+</body>
+</html>

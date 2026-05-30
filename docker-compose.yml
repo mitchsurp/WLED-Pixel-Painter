@@ -1,0 +1,16 @@
+services:
+  wled-painter:
+    build: .
+    image: wled-painter:latest
+    container_name: wled-painter
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      # Persists config.json across container restarts/rebuilds
+      - wled-config:/data
+    environment:
+      - PORT=3001
+      - CONFIG_PATH=/data/config.json
+
+volumes:
+  wled-config:

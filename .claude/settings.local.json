@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install *)",
+      "Bash(npm start *)",
+      "Bash(docker compose up *)",
+      "Bash(curl -s -X POST http://192.168.2.29/json/state -H 'Content-Type: application/json' -d '{\"on\":true,\"bri\":128,\"seg\":[{\"id\":0,\"start\":0,\"stop\":256,\"i\":[0,255,0,0,1,0,255,0]}]}')",
+      "Bash(python3 -c ' *)",
+      "Bash(python3 *)",
+      "Bash(docker compose *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3001/)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3001/tablet)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3001/desktop)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3001/admin)",
+      "Bash(curl -s -X POST http://localhost:3001/api/send -H 'Content-Type: application/json' -d '{\"delta\":[[0,255,0,0],[1,0,255,0],[2,0,0,255]]}')",
+      "Bash(curl -s http://localhost:3001/api/canvas)",
+      "Bash(chromium-browser --headless=new --no-sandbox --disable-gpu --window-size=1280,800 --screenshot=/home/mitch/claude-wled-painter/claude-wled-painter/docs/screenshots/desktop.png http://localhost:3001/desktop)",
+      "Bash(echo \"desktop: $?\")",
+      "Bash(chromium-browser --headless=new --no-sandbox --disable-gpu --window-size=390,844 --screenshot=/home/mitch/claude-wled-painter/claude-wled-painter/docs/screenshots/tablet.png http://localhost:3001/tablet)",
+      "Bash(echo \"tablet: $?\")",
+      "Bash(chromium-browser --headless=new --no-sandbox --disable-gpu --window-size=1280,800 --screenshot=/home/mitch/claude-wled-painter/claude-wled-painter/docs/screenshots/admin.png http://localhost:3001/admin)"
+    ]
+  }
+}

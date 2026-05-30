@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>WLED Pixel Painter</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@300;400;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg:      #0a0a0f;
+    --surface: #12121a;
+    --panel:   #1a1a26;
+    --border:  #2a2a3d;
+    --accent:  #7b61ff;
+    --glow:    #7b61ff66;
+    --text:    #e8e8f0;
+    --muted:   #6b6b8a;
+    --success: #4ecca3;
+    --error:   #ff6b6b;
+    --warn:    #ffd166;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Space Grotesk', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Header */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    position: sticky; top: 0; z-index: 100;
+  }
+  .logo {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700; font-size: 1.1rem; letter-spacing: 0.04em;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .logo-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--accent); box-shadow: 0 0 12px var(--accent);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%,100% { box-shadow: 0 0 6px var(--accent); }
+    50%      { box-shadow: 0 0 18px var(--accent), 0 0 30px var(--glow); }
+  }
+  .status-bar {
+    display: flex; align-items: center; gap: 8px;
+    font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; color: var(--muted);
+  }
+  .status-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--muted); transition: background 0.3s, box-shadow 0.3s;
+  }
+  .status-dot.ok   { background: var(--success); box-shadow: 0 0 8px var(--success); }
+  .status-dot.error{ background: var(--error);   box-shadow: 0 0 8px var(--error); }
+  .status-dot.busy { background: var(--warn);    box-shadow: 0 0 8px var(--warn); animation: pulse 0.8s infinite; }
+
+  /* Layout */
+  main { flex: 1; display: flex; overflow: hidden; }
+
+  /* Sidebar */
+  aside {
+    width: 220px; min-width: 220px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    overflow-y: auto;
+  }
+  .panel { padding: 16px; border-bottom: 1px solid var(--border); }
+  .panel-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.62rem; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.12em;
+    color: var(--muted); margin-bottom: 10px;
+  }
+
+  /* Buttons */
+  button {
+    font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 0.82rem;
+    border: none; border-radius: 6px; cursor: pointer; transition: all 0.15s; padding: 8px 14px;
+  }
+  .btn-primary { background: var(--accent); color: #fff; width: 100%; }
+  .btn-primary:hover { background: #9580ff; box-shadow: 0 0 14px var(--glow); }
+  .btn-secondary { background: var(--panel); color: var(--text); border: 1px solid var(--border); width: 100%; }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-danger { background: transparent; color: var(--error); border: 1px solid var(--error); width: 100%; margin-top: 6px; }
+  .btn-danger:hover { background: #ff6b6b22; }
+  .btn-row { display: flex; gap: 6px; }
+  .btn-row button { flex: 1; }
+
+  /* Tools */
+  .tools { display: flex; gap: 6px; }
+  .tool-btn {
+    flex: 1; padding: 8px 4px; font-size: 0.72rem;
+    background: var(--panel); color: var(--muted);
+    border: 1px solid var(--border); border-radius: 6px;
+    cursor: pointer; text-align: center; transition: all 0.15s;
+  }
+  .tool-btn:hover { color: var(--text); border-color: var(--muted); }
+  .tool-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); box-shadow: 0 0 10px var(--glow); }
+  .tool-icon { font-size: 1.1rem; display: block; margin-bottom: 2px; }
+
+  /* Color */
+  .color-preview {
+    width: 100%; height: 40px; border-radius: 6px;
+    border: 2px solid var(--border); margin-bottom: 8px;
+    cursor: pointer; transition: border-color 0.2s; position: relative; overflow: hidden;
+  }
+  .color-preview:hover { border-color: var(--accent); }
+  input[type="color"] { position: absolute; opacity: 0; width: 100%; height: 100%; cursor: pointer; top:0; left:0; }
+  .swatches { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; }
+  .swatch {
+    width: 100%; aspect-ratio: 1; border-radius: 4px; cursor: pointer;
+    border: 2px solid transparent; transition: transform 0.1s, border-color 0.1s;
+  }
+  .swatch:hover  { transform: scale(1.15); }
+  .swatch.active { border-color: #fff; }
+  .swatch.eraser { background: var(--panel); border: 2px dashed var(--border); }
+
+  /* Brightness */
+  label { font-size: 0.76rem; color: var(--muted); display: block; margin-bottom: 4px; }
+  input[type="range"] {
+    -webkit-appearance: none; width: 100%; height: 4px;
+    background: var(--border); border-radius: 2px; outline: none; margin: 6px 0;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 14px; height: 14px;
+    border-radius: 50%; background: var(--accent); cursor: pointer; box-shadow: 0 0 8px var(--glow);
+  }
+  .val-label { font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; color: var(--accent); float: right; }
+
+  /* Canvas */
+  .canvas-area {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 32px; background: var(--bg); overflow: auto;
+  }
+  .grid-wrap { position: relative; user-select: none; }
+  #pixel-grid {
+    display: grid;
+    border: 1px solid var(--border);
+    box-shadow: 0 0 40px #7b61ff22, 0 0 80px #7b61ff0a;
+    border-radius: 3px; overflow: hidden; cursor: crosshair;
+  }
+  .pixel { background: #000; }
+  .pixel:hover { opacity: 0.85; }
+  .grid-overlay { position: absolute; top:0; left:0; pointer-events: none; opacity: 0.12; }
+
+  /* Strip mode label */
+  .mode-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: 'JetBrains Mono', monospace; font-size: 0.65rem;
+    padding: 3px 8px; border-radius: 12px;
+    border: 1px solid var(--border); color: var(--muted);
+    margin-bottom: 10px;
+  }
+  .mode-badge.matrix { border-color: var(--accent); color: var(--accent); }
+
+  /* Not-configured banner */
+  #unconfigured-banner {
+    display: none;
+    background: #ffd16622; border: 1px solid var(--warn);
+    border-radius: 8px; padding: 12px 16px; margin-bottom: 20px;
+    font-size: 0.82rem; color: var(--warn); text-align: center;
+  }
+
+  /* Toast */
+  #toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px 16px;
+    font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--text);
+    transform: translateY(80px); opacity: 0;
+    transition: all 0.3s cubic-bezier(.34,1.56,.64,1); z-index: 999; max-width: 320px;
+  }
+  #toast.show  { transform: translateY(0); opacity: 1; }
+  #toast.ok    { border-color: var(--success); color: var(--success); }
+  #toast.error { border-color: var(--error);   color: var(--error); }
+
+  .hint { font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; color: var(--muted); margin-top: 12px; text-align: center; }
+
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo"><div class="logo-dot"></div>WLED pixel painter</div>
+  <div class="status-bar">
+    <div class="status-dot" id="status-dot"></div>
+    <span id="status-text">loading…</span>
+    <a href="/tablet" style="font-family:'JetBrains Mono',monospace;font-size:0.65rem;color:var(--muted);text-decoration:none;padding:3px 8px;border:1px solid var(--border);border-radius:4px;margin-left:6px">Tablet ↗</a>
+  </div>
+</header>
+
+<main>
+  <aside>
+    <!-- Tools -->
+    <div class="panel">
+      <div class="panel-title">🖌 Tools</div>
+      <div class="tools">
+        <div class="tool-btn active" id="tool-paint" onclick="setTool('paint')"><span class="tool-icon">✏️</span>Paint</div>
+        <div class="tool-btn" id="tool-erase" onclick="setTool('erase')"><span class="tool-icon">🗑</span>Erase</div>
+        <div class="tool-btn" id="tool-fill"  onclick="setTool('fill')"><span class="tool-icon">🪣</span>Fill</div>
+      </div>
+    </div>
+
+    <!-- Color -->
+    <div class="panel">
+      <div class="panel-title">🎨 Color</div>
+      <div class="color-preview" id="color-preview" style="background:#ff4444">
+        <input type="color" id="color-picker" value="#ff4444" oninput="onColorPick(this.value)" />
+      </div>
+      <div class="swatches" id="swatches"></div>
+    </div>
+
+    <!-- Brightness -->
+    <div class="panel">
+      <div class="panel-title">☀ Brightness <span class="val-label" id="bri-label">128</span></div>
+      <input type="range" id="brightness" min="0" max="255" value="128"
+        oninput="document.getElementById('bri-label').textContent=this.value" />
+    </div>
+
+    <!-- Send -->
+    <div class="panel">
+      <div class="panel-title">📡 Send</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <input type="checkbox" id="multiplayer" checked style="accent-color:var(--accent);width:16px;height:16px"
+          onchange="onMultiplayerToggle(this.checked)" />
+        <label for="multiplayer" style="margin:0;color:var(--text);font-size:0.8rem">Multiplayer</label>
+        <span id="user-count" style="font-family:'JetBrains Mono',monospace;font-size:0.65rem;color:var(--muted);margin-left:auto"></span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+        <input type="checkbox" id="live-send" checked style="accent-color:var(--accent);width:16px;height:16px" />
+        <label style="margin:0;color:var(--text);font-size:0.8rem">Live send while painting</label>
+      </div>
+      <div class="btn-row">
+        <button class="btn-primary"   onclick="sendAll()">Send All</button>
+        <button class="btn-secondary" onclick="clearCanvas()">Clear</button>
+      </div>
+      <button class="btn-danger" onclick="clearWled()">Clear WLED Strip</button>
+    </div>
+  </aside>
+
+  <div class="canvas-area">
+    <div id="unconfigured-banner">
+      ⚠ WLED not configured — <a href="/admin" style="color:var(--warn)">go to Admin</a> to set up your device.
+    </div>
+    <div id="mode-badge" class="mode-badge">⏳ loading config…</div>
+    <div class="grid-wrap">
+      <div id="pixel-grid"></div>
+      <canvas id="grid-overlay" class="grid-overlay"></canvas>
+    </div>
+    <div class="hint" id="hint"></div>
+  </div>
+</main>
+
+<div id="toast"></div>
+
+<script>
+const PALETTE = [
+  "#ff0000","#ff6600","#ffcc00","#ffff00","#00ff00","#00ffcc","#00ccff","#0066ff",
+  "#0000ff","#9900ff","#ff00ff","#ff0099","#ffffff","#aaaaaa","#555555","#000000",
+];
+
+let cols = 16, rows = 1, cellSize = 24, serpentine = false, isMatrix = false;
+let tool = "paint", color = "#ff4444";
+let pixels = [], painting = false, sendDebounce = null;
+let configured = false;
+
+// ── Multiplayer state ─────────────────────────────────────────────────────────
+let multiplayer = true;
+let dirtyPixels = new Set();   // grid indices changed since last send
+let evtSource   = null;
+let userCount   = 0;
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+window.addEventListener("DOMContentLoaded", async () => {
+  buildSwatches();
+  await loadConfig();
+  buildGrid();
+  if (multiplayer) connectMultiplayer();
+});
+
+async function loadConfig() {
+  try {
+    const res  = await fetch("/api/config");
+    const data = await res.json();
+    if (data.ok) {
+      const c = data.config;
+      cols       = c.cols       ?? 16;
+      rows       = c.rows       ?? 1;
+      serpentine = c.serpentine ?? false;
+      isMatrix   = c.isMatrix   ?? false;
+      configured = !!c.deviceName || c.ledCount > 0;
+
+      const bri = c.brightness ?? 128;
+      document.getElementById("brightness").value = bri;
+      document.getElementById("bri-label").textContent = bri;
+
+      updateModeBadge(c);
+      if (!configured) document.getElementById("unconfigured-banner").style.display = "block";
+      else             setStatus("ok", c.deviceName || "connected");
+    }
+  } catch (e) {
+    setStatus("error", "backend offline");
+  }
+}
+
+function updateModeBadge(cfg) {
+  const badge = document.getElementById("mode-badge");
+  if (cfg.isMatrix) {
+    badge.textContent = `⊞ Matrix ${cfg.cols}×${cfg.rows}`;
+    badge.className = "mode-badge matrix";
+  } else {
+    badge.textContent = `— Strip  ${cfg.ledCount ?? cfg.cols} LEDs`;
+    badge.className = "mode-badge";
+  }
+}
+
+// ── Grid ──────────────────────────────────────────────────────────────────────
+function buildGrid() {
+  const maxDim = Math.max(cols, rows);
+  cellSize = Math.max(6, Math.min(40, Math.floor(680 / maxDim)));
+
+  const total = cols * rows;
+  pixels = Array.from({ length: total }, () => ({ r:0, g:0, b:0 }));
+
+  const grid = document.getElementById("pixel-grid");
+  grid.style.gridTemplateColumns = `repeat(${cols}, ${cellSize}px)`;
+  grid.style.gridTemplateRows    = `repeat(${rows}, ${cellSize}px)`;
+  grid.innerHTML = "";
+
+  for (let idx = 0; idx < total; idx++) {
+    const cell = document.createElement("div");
+    cell.className = "pixel";
+    cell.dataset.idx = idx;
+    cell.style.width  = cellSize + "px";
+    cell.style.height = cellSize + "px";
+    cell.style.background = "#000";
+    cell.addEventListener("mouseenter", e => {
+      const i = parseInt(e.target.dataset.idx);
+      document.getElementById("hint").textContent =
+        `LED ${ledIndex(i)} · col ${i % cols} row ${Math.floor(i / cols)} · ${total} total`;
+      if (painting) applyTool(i);
+    });
+    cell.addEventListener("mousedown", e => {
+      e.preventDefault(); painting = true; applyTool(parseInt(e.target.dataset.idx));
+    });
+    grid.appendChild(cell);
+  }
+  drawGridLines();
+  document.getElementById("hint").textContent = `${total} LEDs`;
+  document.addEventListener("mouseup", () => { painting = false; });
+}
+
+function ledIndex(gridIdx) {
+  const row = Math.floor(gridIdx / cols);
+  const col = gridIdx % cols;
+  if (serpentine && row % 2 === 1) return row * cols + (cols - 1 - col);
+  return gridIdx;
+}
+
+// Inverse of ledIndex — serpentine is its own inverse, non-serpentine is identity.
+function ledToGridIndex(ledIdx) {
+  const row = Math.floor(ledIdx / cols);
+  const col = ledIdx % cols;
+  if (serpentine && row % 2 === 1) return row * cols + (cols - 1 - col);
+  return ledIdx;
+}
+
+function drawGridLines() {
+  const canvas = document.getElementById("grid-overlay");
+  const w = cols * cellSize, h = rows * cellSize;
+  canvas.width = w; canvas.height = h;
+  canvas.style.width = w + "px"; canvas.style.height = h + "px";
+  if (cellSize < 8) { canvas.style.display = "none"; return; }
+  canvas.style.display = "block";
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, w, h);
+  ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 0.5;
+  for (let x = 0; x <= cols; x++) { ctx.beginPath(); ctx.moveTo(x*cellSize,0); ctx.lineTo(x*cellSize,h); ctx.stroke(); }
+  for (let y = 0; y <= rows; y++) { ctx.beginPath(); ctx.moveTo(0,y*cellSize); ctx.lineTo(w,y*cellSize); ctx.stroke(); }
+}
+
+// ── Tools ─────────────────────────────────────────────────────────────────────
+function applyTool(gridIdx) {
+  if (tool === "paint") paintPixel(gridIdx, hexToRgb(color));
+  else if (tool === "erase") paintPixel(gridIdx, {r:0,g:0,b:0});
+  else if (tool === "fill") {
+    const target = {...pixels[gridIdx]}, fill = hexToRgb(color);
+    if (rgbEq(target, fill)) return;
+    floodFill(gridIdx, target, fill);
+  }
+  if (document.getElementById("live-send").checked) scheduleSend();
+}
+
+function paintPixel(gridIdx, rgb) {
+  pixels[gridIdx] = {...rgb};
+  dirtyPixels.add(gridIdx);
+  const cell = document.querySelector(`[data-idx="${gridIdx}"]`);
+  if (cell) cell.style.background = `rgb(${rgb.r},${rgb.g},${rgb.b})`;
+}
+
+function floodFill(startIdx, target, fill) {
+  const stack = [startIdx], visited = new Set();
+  while (stack.length) {
+    const idx = stack.pop();
+    if (idx < 0 || idx >= pixels.length || visited.has(idx) || !rgbEq(pixels[idx], target)) continue;
+    visited.add(idx); paintPixel(idx, fill);
+    const row = Math.floor(idx/cols), col = idx%cols;
+    if (col > 0)        stack.push(idx-1);
+    if (col < cols-1)   stack.push(idx+1);
+    if (row > 0)        stack.push(idx-cols);
+    if (row < rows-1)   stack.push(idx+cols);
+  }
+}
+
+// ── Send ──────────────────────────────────────────────────────────────────────
+function scheduleSend() {
+  clearTimeout(sendDebounce);
+  sendDebounce = setTimeout(sendChanges, 60);
+}
+
+// Called by live-send: sends only dirty pixels in multiplayer, full canvas in single-player.
+async function sendChanges() {
+  const brightness = parseInt(document.getElementById("brightness").value);
+  let body;
+
+  if (multiplayer) {
+    if (dirtyPixels.size === 0) return;
+    const delta = [];
+    for (const gridIdx of dirtyPixels) {
+      delta.push([ledIndex(gridIdx), pixels[gridIdx].r, pixels[gridIdx].g, pixels[gridIdx].b]);
+    }
+    dirtyPixels.clear();
+    body = { delta, brightness };
+  } else {
+    const ledPixels = Array(pixels.length);
+    for (let i = 0; i < pixels.length; i++) {
+      const p = pixels[i];
+      ledPixels[ledIndex(i)] = [p.r, p.g, p.b];
+    }
+    body = { pixels: ledPixels, brightness };
+  }
+  await postSend(body);
+}
+
+// "Send All" button: always pushes the full local canvas regardless of mode.
+async function sendAll() {
+  const brightness = parseInt(document.getElementById("brightness").value);
+  const ledPixels  = Array(pixels.length);
+  for (let i = 0; i < pixels.length; i++) {
+    const p = pixels[i];
+    ledPixels[ledIndex(i)] = [p.r, p.g, p.b];
+  }
+  dirtyPixels.clear();
+  await postSend({ pixels: ledPixels, brightness });
+}
+
+async function postSend(body) {
+  setStatus("busy", "sending…");
+  try {
+    const res  = await fetch("/api/send", {
+      method: "POST", headers: {"Content-Type":"application/json"},
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (data.ok) setStatus("ok", body.delta ? `+${body.delta.length} px` : `sent ${pixels.length} LEDs`);
+    else { setStatus("error", "send failed"); toast(data.error, "error"); }
+  } catch (e) {
+    setStatus("error", "backend unreachable"); toast(e.message, "error");
+  }
+}
+
+async function clearWled() {
+  setStatus("busy", "clearing…");
+  try {
+    const res  = await fetch("/api/clear", { method:"POST", headers:{"Content-Type":"application/json"}, body:"{}" });
+    const data = await res.json();
+    if (data.ok) { clearCanvas(); setStatus("ok", "strip cleared"); toast("Strip cleared ✓", "ok"); }
+    else         { setStatus("error", "clear failed"); toast(data.error, "error"); }
+  } catch (e) { setStatus("error", "backend unreachable"); toast(e.message, "error"); }
+}
+
+function clearCanvas() {
+  pixels = pixels.map(() => ({r:0,g:0,b:0}));
+  dirtyPixels.clear();
+  document.querySelectorAll(".pixel").forEach(c => c.style.background = "#000");
+}
+
+// ── Multiplayer ───────────────────────────────────────────────────────────────
+function onMultiplayerToggle(enabled) {
+  multiplayer = enabled;
+  dirtyPixels.clear();
+  if (enabled) connectMultiplayer();
+  else disconnectMultiplayer();
+}
+
+function connectMultiplayer() {
+  if (evtSource) { evtSource.close(); evtSource = null; }
+  evtSource = new EventSource("/api/events");
+  evtSource.addEventListener("canvas", e => applyFullCanvas(JSON.parse(e.data)));
+  evtSource.addEventListener("delta",  e => applyDelta(JSON.parse(e.data)));
+  evtSource.addEventListener("users",  e => { userCount = parseInt(e.data); updateUserCount(); });
+  evtSource.onerror = () => { /* degrade silently — single-player still works */ };
+}
+
+function disconnectMultiplayer() {
+  if (evtSource) { evtSource.close(); evtSource = null; }
+  userCount = 0;
+  updateUserCount();
+}
+
+function applyFullCanvas(canvas) {
+  canvas.forEach(([r, g, b], ledIdx) => {
+    const gridIdx = ledToGridIndex(ledIdx);
+    if (gridIdx >= 0 && gridIdx < pixels.length) {
+      pixels[gridIdx] = {r, g, b};
+      const cell = document.querySelector(`[data-idx="${gridIdx}"]`);
+      if (cell) cell.style.background = `rgb(${r},${g},${b})`;
+    }
+  });
+}
+
+function applyDelta(changes) {
+  changes.forEach(([ledIdx, r, g, b]) => {
+    const gridIdx = ledToGridIndex(ledIdx);
+    if (gridIdx >= 0 && gridIdx < pixels.length) {
+      pixels[gridIdx] = {r, g, b};
+      const cell = document.querySelector(`[data-idx="${gridIdx}"]`);
+      if (cell) cell.style.background = `rgb(${r},${g},${b})`;
+    }
+  });
+}
+
+function updateUserCount() {
+  const el = document.getElementById("user-count");
+  if (!el) return;
+  el.textContent = (multiplayer && userCount > 0) ? `${userCount} online` : "";
+}
+
+// ── UI helpers ────────────────────────────────────────────────────────────────
+function setTool(t) {
+  tool = t;
+  ["paint","erase","fill"].forEach(id => document.getElementById("tool-"+id).classList.toggle("active", id===t));
+}
+
+function buildSwatches() {
+  const cont = document.getElementById("swatches");
+  const eraser = document.createElement("div");
+  eraser.className = "swatch eraser"; eraser.title = "Eraser";
+  eraser.onclick = () => setTool("erase");
+  cont.appendChild(eraser);
+  PALETTE.forEach(hex => {
+    const s = document.createElement("div");
+    s.className = "swatch"; s.style.background = hex; s.title = hex;
+    s.onclick = () => {
+      color = hex;
+      document.getElementById("color-picker").value = hex;
+      document.getElementById("color-preview").style.background = hex;
+      setTool("paint");
+      document.querySelectorAll(".swatch").forEach(el => el.classList.remove("active"));
+      s.classList.add("active");
+    };
+    cont.appendChild(s);
+  });
+}
+
+function onColorPick(hex) {
+  color = hex;
+  document.getElementById("color-preview").style.background = hex;
+  setTool("paint");
+}
+
+function setStatus(type, text) {
+  document.getElementById("status-dot").className = "status-dot " + type;
+  document.getElementById("status-text").textContent = text;
+}
+
+let toastTimer;
+function toast(msg, type="ok") {
+  const el = document.getElementById("toast");
+  el.textContent = msg; el.className = "show " + type;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = ""; }, 3000);
+}
+
+function hexToRgb(hex) {
+  return { r: parseInt(hex.slice(1,3),16), g: parseInt(hex.slice(3,5),16), b: parseInt(hex.slice(5,7),16) };
+}
+function rgbEq(a, b) { return a.r===b.r && a.g===b.g && a.b===b.b; }
+</script>
+</body>
+</html>

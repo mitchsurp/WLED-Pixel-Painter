@@ -1,0 +1,16 @@
+{
+  "name": "wled-pixel-painter",
+  "version": "1.0.0",
+  "description": "Paint pixels on a WLED LED strip from a web UI",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
