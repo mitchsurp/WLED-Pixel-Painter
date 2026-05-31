@@ -21,6 +21,10 @@ const cors    = require("cors");
 const path    = require("path");
 const fs      = require("fs");
 const dgram   = require("dgram");
+const os      = require("os");
+
+let Bonjour;
+try { ({ Bonjour } = require("bonjour-service")); } catch { /* mDNS optional */ }
 
 const app  = express();
 const PORT = process.env.PORT || 3001;
@@ -39,7 +43,24 @@ const DEFAULT_CONFIG = {
   ledCount:    16,
   udpPort:     21329,
   defaultMode: "desktop",
+  scanSubnets: [],
 };
+
+// Returns /24 prefixes from real LAN interfaces (excludes loopback and Docker bridges).
+function detectLocalSubnets() {
+  const prefixes = new Set();
+  for (const iface of Object.values(os.networkInterfaces())) {
+    for (const addr of iface) {
+      if (addr.family !== "IPv4" || addr.internal) continue;
+      // Include 192.168.x.x and 10.x.x.x; skip Docker/VM bridge ranges (172.x).
+      if (addr.address.startsWith("192.168.") || addr.address.startsWith("10.")) {
+        const p = addr.address.split(".");
+        prefixes.add(`${p[0]}.${p[1]}.${p[2]}`);
+      }
+    }
+  }
+  return [...prefixes];
+}
 
 // ── UDP realtime (DRGB protocol) ──────────────────────────────────────────────
 // Reuse one socket for all sends to avoid per-frame socket creation overhead.
@@ -183,9 +204,11 @@ app.get("/api/canvas", (_req, res) => {
 
 // ── Config API ────────────────────────────────────────────────────────────────
 
-// Public: returns config minus the WLED IP
+// Public: returns config minus the WLED IP.
+// If no scanSubnets saved yet, auto-detect from local network interfaces.
 app.get("/api/config", (_req, res) => {
   const { wledIp, ...safe } = loadConfig();
+  if (!safe.scanSubnets?.length) safe.scanSubnets = detectLocalSubnets();
   res.json({ ok: true, config: safe });
 });
 
@@ -241,6 +264,96 @@ app.get("/api/ping", async (req, res) => {
       error: `Could not reach WLED at ${wledIp}: ${err.message}`,
     });
   }
+});
+
+// ── Device discovery ──────────────────────────────────────────────────────────
+// Streams SSE events: scanning → device (per found device) → done
+// mDNS (local subnet, instant) runs in parallel with HTTP subnet scan.
+app.get("/api/discover", async (req, res) => {
+  res.writeHead(200, {
+    "Content-Type":      "text/event-stream",
+    "Cache-Control":     "no-cache",
+    "Connection":        "keep-alive",
+    "X-Accel-Buffering": "no",
+  });
+
+  const found  = new Set();
+  let   closed = false;
+  req.on("close", () => { closed = true; });
+
+  function emit(event, data) {
+    if (closed) return;
+    res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+  }
+
+  function parseDevice(ip, info) {
+    const matrix   = info?.leds?.matrix;
+    const isMatrix = !!(matrix?.w && matrix?.h && matrix.h > 1);
+    const cols     = isMatrix ? matrix.w : (info?.leds?.count ?? 1);
+    const rows     = isMatrix ? matrix.h : 1;
+    const ledCount = info?.leds?.count ?? cols * rows;
+    return { ip, name: info?.name ?? ip, isMatrix, cols, rows, ledCount, ver: info?.ver ?? null };
+  }
+
+  function offerDevice(ip, info) {
+    if (found.has(ip) || closed) return;
+    found.add(ip);
+    emit("device", parseDevice(ip, info));
+  }
+
+  // ── mDNS (bonjour) ────────────────────────────────────────────────────────
+  let mdnsDone = false;
+  const MDNS_TIMEOUT = 4000;
+
+  if (Bonjour) {
+    let bonjour, browser;
+    try {
+      bonjour = new Bonjour();
+      browser = bonjour.find({ type: "wled" }, async (service) => {
+        const ip = service.addresses?.find(a => /^\d+\.\d+\.\d+\.\d+$/.test(a))
+                   ?? service.referer?.address;
+        if (!ip || closed) return;
+        try {
+          const r = await fetch(`http://${ip}/json/info`, { signal: AbortSignal.timeout(2000) });
+          const info = await r.json();
+          if (info?.leds) offerDevice(ip, info);
+        } catch {}
+      });
+    } catch (e) {
+      console.warn("mDNS init failed:", e.message);
+    }
+
+    setTimeout(() => {
+      try { browser?.stop(); bonjour?.destroy(); } catch {}
+      mdnsDone = true;
+    }, MDNS_TIMEOUT);
+  } else {
+    mdnsDone = true;
+  }
+
+  // ── Subnet scan ───────────────────────────────────────────────────────────
+  const cfg     = loadConfig();
+  const subnets = cfg.scanSubnets?.length ? cfg.scanSubnets : detectLocalSubnets();
+  const ips     = subnets.flatMap(prefix =>
+    Array.from({ length: 254 }, (_, i) => `${prefix}.${i + 1}`)
+  );
+
+  emit("scanning", { total: ips.length, subnets });
+
+  await Promise.allSettled(ips.map(async ip => {
+    if (closed) return;
+    try {
+      const r = await fetch(`http://${ip}/json/info`, { signal: AbortSignal.timeout(500) });
+      if (!r.ok) return;
+      const info = await r.json();
+      if (info?.leds) offerDevice(ip, info);
+    } catch {}
+  }));
+
+  // Wait for mDNS window to close before ending the stream.
+  if (!mdnsDone) await new Promise(r => setTimeout(r, MDNS_TIMEOUT));
+  emit("done", { count: found.size });
+  res.end();
 });
 
 // ── Send pixels ───────────────────────────────────────────────────────────────

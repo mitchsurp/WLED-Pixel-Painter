@@ -1,8 +1,8 @@
 # ── Stage 1: install deps ──────────────────────────────────────────────────────
 FROM node:20-alpine AS deps
 WORKDIR /app
-COPY package.json ./
-RUN npm install --omit=dev
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
 
 # ── Stage 2: lean runtime image ───────────────────────────────────────────────
 FROM node:20-alpine

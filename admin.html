@@ -158,6 +158,77 @@
   ::-webkit-scrollbar { width: 5px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* Discovery card — full-width */
+  .card.wide { max-width: 960px; flex-basis: 100%; }
+
+  /* Chip / tag input */
+  .chip-wrap {
+    display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 6px; padding: 6px 10px; cursor: text; min-height: 42px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .chip-wrap:focus-within { border-color: var(--accent); box-shadow: 0 0 0 2px var(--glow); }
+  .chip {
+    display: flex; align-items: center; gap: 5px;
+    background: #7b61ff18; border: 1px solid var(--accent);
+    border-radius: 4px; padding: 2px 8px;
+    font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--accent);
+  }
+  .chip-x {
+    background: none; border: none; color: var(--accent); cursor: pointer;
+    padding: 0; font-size: 1rem; line-height: 1; opacity: 0.7;
+  }
+  .chip-x:hover { opacity: 1; }
+  .chip-text {
+    border: none; background: transparent; color: var(--text); outline: none;
+    font-family: 'JetBrains Mono', monospace; font-size: 0.82rem;
+    flex: 1; min-width: 150px;
+  }
+  .chip-hint { font-size: 0.75rem; color: var(--muted); margin-top: 5px; }
+
+  /* Scan status bar */
+  .scan-status {
+    display: none; align-items: center; gap: 10px; margin-top: 14px;
+    font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; color: var(--muted);
+  }
+  .scan-status.visible { display: flex; }
+  .spin {
+    width: 14px; height: 14px; border: 2px solid var(--border);
+    border-top-color: var(--accent); border-radius: 50%;
+    animation: spin 0.7s linear infinite; flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Device result grid */
+  .device-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 12px; margin-top: 16px;
+  }
+  .device-card {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 8px; padding: 14px; display: flex; flex-direction: column; gap: 8px;
+    transition: border-color 0.15s;
+  }
+  .device-card:hover { border-color: var(--accent); }
+  .device-name {
+    font-weight: 600; font-size: 0.9rem;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .device-ip {
+    font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; color: var(--muted);
+  }
+  .device-badge {
+    display: inline-block; font-family: 'JetBrains Mono', monospace; font-size: 0.65rem;
+    font-weight: 700; letter-spacing: 0.06em; padding: 2px 7px; border-radius: 4px;
+  }
+  .badge-matrix { background: #7b61ff22; color: var(--accent); border: 1px solid var(--accent); }
+  .badge-strip  { background: #4ecca322; color: var(--success); border: 1px solid var(--success); }
+  .device-dims  { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--text); }
+  .device-ver   { font-family: 'JetBrains Mono', monospace; font-size: 0.68rem; color: var(--muted); }
+  .device-card button { margin-top: auto; width: 100%; }
 </style>
 </head>
 <body>
@@ -232,6 +303,34 @@
     </div>
   </div>
 
+  <!-- ── Discovery card ── -->
+  <div class="card wide">
+    <div class="card-title">◎ Device Discovery</div>
+
+    <label style="font-size:0.8rem;color:var(--muted);display:block;margin-bottom:6px">
+      Subnets to scan
+    </label>
+    <div class="chip-wrap" id="chip-wrap" onclick="document.getElementById('subnet-input').focus()">
+      <!-- chips injected here by JS -->
+      <input type="text" class="chip-text" id="subnet-input"
+             placeholder="Add subnet, e.g. 192.168.2  then Enter"
+             onkeydown="subnetKeydown(event)"
+             oninput="updateScanHint()" />
+    </div>
+    <div class="chip-hint" id="scan-hint"></div>
+
+    <div style="margin-top:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <button class="btn-primary" onclick="startDiscovery()">Discover Devices</button>
+    </div>
+
+    <div class="scan-status" id="scan-status">
+      <div class="spin"></div>
+      <span id="scan-label">Scanning…</span>
+    </div>
+
+    <div class="device-grid" id="device-grid"></div>
+  </div>
+
   <!-- ── Interface card ── -->
   <div class="card" style="max-width:460px">
     <div class="card-title">🖥 Default View</div>
@@ -274,6 +373,9 @@ async function loadCurrentConfig() {
     document.getElementById("bri-label").textContent = c.brightness ?? 128;
 
     updateDefaultModeUI(c.defaultMode ?? "desktop");
+
+    subnets = c.scanSubnets ?? [];
+    renderChips();
 
     if (c.deviceName) {
       // show a read-only info summary from saved config
@@ -419,6 +521,139 @@ async function clearWled() {
   } catch (e) {
     toast("Backend unreachable: " + e.message, "error");
   }
+}
+
+// ── Subnet chip input ─────────────────────────────────────────────────────────
+let subnets = [];   // array of "192.168.1" style prefixes
+
+function renderChips() {
+  const wrap  = document.getElementById("chip-wrap");
+  const input = document.getElementById("subnet-input");
+  // Remove existing chips (keep the input element)
+  [...wrap.querySelectorAll(".chip")].forEach(c => c.remove());
+  subnets.forEach(prefix => {
+    const chip = document.createElement("span");
+    chip.className = "chip";
+    chip.innerHTML = `${prefix}.x <button class="chip-x" onclick="removeSubnet('${prefix}')" title="Remove">&times;</button>`;
+    wrap.insertBefore(chip, input);
+  });
+  updateScanHint();
+}
+
+function addSubnet(raw) {
+  const prefix = raw.trim().replace(/\.x?$/, "");   // strip trailing ".x" or "."
+  // Must be three dot-separated octets, each 0-255
+  const parts = prefix.split(".");
+  if (parts.length !== 3 || parts.some(p => isNaN(p) || +p < 0 || +p > 255)) {
+    toast(`"${prefix}" is not a valid subnet prefix (e.g. 192.168.2)`, "error");
+    return false;
+  }
+  if (subnets.includes(prefix)) return false;
+  subnets.push(prefix);
+  renderChips();
+  saveSubnets();
+  return true;
+}
+
+function removeSubnet(prefix) {
+  subnets = subnets.filter(s => s !== prefix);
+  renderChips();
+  saveSubnets();
+}
+
+function subnetKeydown(e) {
+  const input = e.target;
+  if (e.key === "Enter" || e.key === "," || e.key === "Tab") {
+    if (input.value.trim()) {
+      if (addSubnet(input.value)) input.value = "";
+      e.preventDefault();
+    }
+  } else if (e.key === "Backspace" && input.value === "" && subnets.length) {
+    removeSubnet(subnets[subnets.length - 1]);
+  }
+}
+
+function updateScanHint() {
+  const count = subnets.length * 254;
+  const el    = document.getElementById("scan-hint");
+  el.textContent = subnets.length
+    ? `Will probe ${count} IP${count !== 1 ? "s" : ""} across ${subnets.length} subnet${subnets.length !== 1 ? "s" : ""}`
+    : "Add at least one subnet to scan";
+}
+
+async function saveSubnets() {
+  try {
+    await fetch("/api/config", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ scanSubnets: subnets }),
+    });
+  } catch {}
+}
+
+// ── Device discovery ──────────────────────────────────────────────────────────
+let discoverSource = null;
+
+function startDiscovery() {
+  if (discoverSource) { discoverSource.close(); discoverSource = null; }
+
+  const grid   = document.getElementById("device-grid");
+  const status = document.getElementById("scan-status");
+  const label  = document.getElementById("scan-label");
+
+  grid.innerHTML   = "";
+  status.className = "scan-status visible";
+  label.textContent = "Starting…";
+
+  discoverSource = new EventSource("/api/discover");
+
+  discoverSource.addEventListener("scanning", e => {
+    const { total, subnets: s } = JSON.parse(e.data);
+    label.textContent = `Scanning ${total} IPs across ${s.join(", ")}…`;
+  });
+
+  discoverSource.addEventListener("device", e => {
+    const d = JSON.parse(e.data);
+    grid.appendChild(makeDeviceCard(d));
+    label.textContent = `Found ${grid.children.length} device${grid.children.length !== 1 ? "s" : ""}…`;
+  });
+
+  discoverSource.addEventListener("done", e => {
+    const { count } = JSON.parse(e.data);
+    status.className  = "scan-status";
+    label.textContent = "";
+    if (count === 0) grid.innerHTML = `<p style="color:var(--muted);font-size:0.82rem">No WLED devices found. Check that the subnets are correct and WLED is reachable.</p>`;
+    discoverSource.close();
+    discoverSource = null;
+  });
+
+  discoverSource.onerror = () => {
+    status.className  = "scan-status";
+    label.textContent = "";
+    discoverSource?.close();
+    discoverSource = null;
+  };
+}
+
+function makeDeviceCard(d) {
+  const isMatrix = d.isMatrix;
+  const dims = isMatrix ? `${d.cols} &times; ${d.rows}` : `${d.ledCount} LEDs`;
+  const card = document.createElement("div");
+  card.className = "device-card";
+  card.innerHTML = `
+    <div class="device-name" title="${d.name}">${d.name}</div>
+    <div class="device-ip">${d.ip}</div>
+    <div><span class="device-badge ${isMatrix ? "badge-matrix" : "badge-strip"}">${isMatrix ? "2D Matrix" : "1D Strip"}</span></div>
+    <div class="device-dims">${dims}</div>
+    ${d.ver ? `<div class="device-ver">WLED ${d.ver}</div>` : ""}
+    <button class="btn-primary" onclick="connectDevice('${d.ip}')">Connect</button>
+  `;
+  return card;
+}
+
+async function connectDevice(ip) {
+  document.getElementById("wled-ip").value = ip;
+  window.scrollTo({ top: 0, behavior: "smooth" });
+  await pingAndDetect();
 }
 
 // ── Toast ─────────────────────────────────────────────────────────────────────
