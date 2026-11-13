@@ -4,17 +4,17 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>WLED Painter — Admin</title>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@300;400;600&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
 <style>
   :root {
-    --bg:      #0a0a0f;
-    --surface: #12121a;
-    --panel:   #1a1a26;
-    --border:  #2a2a3d;
+    --bg:      #090a10;
+    --surface: #10121d;
+    --panel:   #171a28;
+    --border:  #262b40;
     --accent:  #7b61ff;
-    --glow:    #7b61ff66;
-    --text:    #e8e8f0;
-    --muted:   #6b6b8a;
+    --glow:    #7b61ff55;
+    --text:    #eef0f8;
+    --muted:   #747b96;
     --success: #4ecca3;
     --error:   #ff6b6b;
     --warn:    #ffd166;
@@ -44,48 +44,80 @@
   }
   .header-right { display: flex; align-items: center; gap: 12px; }
   .go-public {
-    font-family: 'JetBrains Mono', monospace; font-size: 0.72rem;
-    color: var(--muted); text-decoration: none; padding: 5px 10px;
+    font-family: 'JetBrains Mono', monospace; font-size: 0.75rem;
+    color: var(--muted); text-decoration: none; padding: 6px 12px;
     border: 1px solid var(--border); border-radius: 6px; transition: all 0.15s;
   }
-  .go-public:hover { color: var(--text); border-color: var(--muted); }
+  .go-public:hover { color: var(--text); border-color: var(--accent); }
 
-  /* Main layout */
-  main {
-    flex: 1; display: flex; align-items: flex-start;
-    justify-content: center; padding: 40px 24px; gap: 24px; flex-wrap: wrap;
+  /* Navigation Tabs */
+  .admin-nav {
+    display: flex; gap: 4px; padding: 12px 24px 0;
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+  }
+  .tab-btn {
+    background: transparent; border: none; color: var(--muted);
+    font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 0.85rem;
+    padding: 10px 18px; border-bottom: 2px solid transparent; cursor: pointer;
+    transition: all 0.15s; display: inline-flex; align-items: center; gap: 6px;
+    white-space: nowrap;
+  }
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn.active {
+    color: var(--accent); border-bottom-color: var(--accent);
   }
 
+  /* Content area */
+  main {
+    flex: 1; padding: 32px 24px; max-width: 1200px; width: 100%; margin: 0 auto;
+  }
+  .tab-pane { display: none; }
+  .tab-pane.active { display: block; }
+
+  /* Cards */
   .card {
     background: var(--surface); border: 1px solid var(--border);
-    border-radius: 12px; padding: 24px; width: 100%; max-width: 460px;
+    border-radius: 12px; padding: 24px; margin-bottom: 24px;
+  }
+  .card-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid var(--border);
   }
   .card-title {
-    font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;
+    font-family: 'JetBrains Mono', monospace; font-size: 0.72rem;
     font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em;
-    color: var(--muted); margin-bottom: 20px;
-    padding-bottom: 12px; border-bottom: 1px solid var(--border);
+    color: var(--muted);
   }
 
-  /* Form elements */
+  /* Form controls */
   .field { margin-bottom: 16px; }
-  label { font-size: 0.8rem; color: var(--muted); display: block; margin-bottom: 5px; }
-  input[type="text"], input[type="number"] {
+  label { font-size: 0.82rem; color: var(--muted); display: block; margin-bottom: 6px; }
+  input[type="text"], input[type="number"], select {
     width: 100%; background: var(--panel); border: 1px solid var(--border);
-    color: var(--text); border-radius: 6px; padding: 9px 12px;
+    color: var(--text); border-radius: 8px; padding: 10px 14px;
     font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; outline: none;
     transition: border-color 0.2s, box-shadow 0.2s;
   }
-  input[type="text"]:focus, input[type="number"]:focus {
+  input[type="text"]:focus, input[type="number"]:focus, select:focus {
     border-color: var(--accent); box-shadow: 0 0 0 2px var(--glow);
   }
-  .input-row { display: flex; gap: 10px; }
-  .input-row > .field { flex: 1; margin-bottom: 0; }
-  .checkbox-row {
-    display: flex; align-items: center; gap: 10px;
-    padding: 10px 0; border-top: 1px solid var(--border); margin-top: 4px;
+  input[type="range"] {
+    -webkit-appearance: none; appearance: none; width: 100%; height: 6px;
+    background: var(--border); border-radius: 3px; outline: none; margin: 8px 0;
   }
-  .checkbox-row label { margin: 0; color: var(--text); font-size: 0.85rem; }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 16px; height: 16px;
+    border-radius: 50%; background: var(--accent); cursor: pointer; box-shadow: 0 0 8px var(--glow);
+  }
+
+  .input-row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .input-row > .field { flex: 1; min-width: 160px; margin-bottom: 0; }
+
+  .checkbox-row {
+    display: flex; align-items: center; gap: 10px; padding: 10px 0;
+  }
+  .checkbox-row label { margin: 0; color: var(--text); font-size: 0.85rem; cursor: pointer; }
   input[type="checkbox"] { accent-color: var(--accent); width: 16px; height: 16px; cursor: pointer; }
 
   /* Buttons */
@@ -100,46 +132,61 @@
   .btn-danger { background: transparent; color: var(--error); border: 1px solid var(--error); }
   .btn-danger:hover { background: #ff6b6b22; }
   .btn-success { background: var(--success); color: #0a0a0f; }
-  .btn-success:hover { opacity: 0.85; }
-  .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
-  .btn-row button { flex: 1; min-width: 100px; }
+  .btn-success:hover { opacity: 0.9; }
+  .btn-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 
-  /* Detected info box */
-  .info-box {
+  /* Grid layout for cards */
+  .grid-2 {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 24px;
+  }
+
+  /* Segment / Element Item Cards */
+  .element-card {
     background: var(--panel); border: 1px solid var(--border);
-    border-radius: 8px; padding: 14px 16px; margin-top: 14px;
-    font-family: 'JetBrains Mono', monospace; font-size: 0.78rem;
-    display: none;
+    border-radius: 10px; padding: 16px; margin-bottom: 12px;
+    display: flex; align-items: center; justify-content: space-between;
+    transition: border-color 0.15s;
   }
-  .info-box.visible { display: block; }
-  .info-box.ok    { border-color: var(--success); }
-  .info-box.error { border-color: var(--error); color: var(--error); }
-  .info-row { display: flex; justify-content: space-between; padding: 4px 0; }
-  .info-row + .info-row { border-top: 1px solid var(--border); }
-  .info-key  { color: var(--muted); }
-  .info-val  { color: var(--text); font-weight: 600; }
-  .info-val.matrix { color: var(--accent); }
-  .info-val.strip  { color: var(--success); }
+  .element-card:hover { border-color: var(--accent); }
+  .element-info { display: flex; flex-direction: column; gap: 4px; }
+  .element-title { font-weight: 600; font-size: 0.92rem; display: flex; align-items: center; gap: 8px; }
+  .element-sub { font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; color: var(--muted); }
+  .badge {
+    font-family: 'JetBrains Mono', monospace; font-size: 0.65rem;
+    padding: 2px 8px; border-radius: 4px; font-weight: 700;
+  }
+  .badge-window { background: #7b61ff22; color: var(--accent); border: 1px solid var(--accent); }
+  .badge-house  { background: #ffd16622; color: var(--warn); border: 1px solid var(--warn); }
+  .badge-yard   { background: #4ecca322; color: var(--success); border: 1px solid var(--success); }
 
-  /* Brightness range */
-  input[type="range"] {
-    -webkit-appearance: none; width: 100%; height: 4px;
-    background: var(--border); border-radius: 2px; outline: none; margin: 8px 0;
+  /* Interactive House Preview Canvas in Admin */
+  .house-preview-wrap {
+    width: 100%; height: 360px; background: #080a14;
+    border: 1px solid var(--border); border-radius: 10px;
+    overflow: hidden; display: flex; align-items: center; justify-content: center;
+    position: relative; margin-bottom: 20px; user-select: none; -webkit-user-select: none;
   }
-  input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none; width: 16px; height: 16px;
-    border-radius: 50%; background: var(--accent); cursor: pointer; box-shadow: 0 0 8px var(--glow);
-  }
-  .val-label { font-family:'JetBrains Mono',monospace; font-size:0.75rem; color:var(--accent); float:right; }
+  .house-preview-wrap svg { width: 100%; height: 100%; }
 
-  /* Saved indicator */
-  .saved-pill {
-    display: inline-flex; align-items: center; gap: 5px;
-    font-family: 'JetBrains Mono', monospace; font-size: 0.7rem;
-    color: var(--success); opacity: 0;
-    transition: opacity 0.4s;
+  .preview-hint {
+    position: absolute; bottom: 8px; left: 12px;
+    font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: var(--muted);
+    background: rgba(16,18,29,0.8); padding: 4px 8px; border-radius: 4px; pointer-events: none;
   }
-  .saved-pill.show { opacity: 1; }
+
+  /* Modal */
+  .modal-backdrop {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
+    z-index: 200; align-items: center; justify-content: center; padding: 20px;
+  }
+  .modal-backdrop.open { display: flex; }
+  .modal-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 24px; max-width: 600px; width: 100%;
+    max-height: 90vh; overflow-y: auto; box-shadow: 0 16px 40px rgba(0,0,0,0.6);
+  }
+  .modal-card h3 { font-size: 1.15rem; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
 
   /* Toast */
   #toast {
@@ -150,520 +197,1730 @@
     transform: translateY(80px); opacity: 0;
     transition: all 0.3s cubic-bezier(.34,1.56,.64,1); z-index: 999;
   }
-  #toast.show  { transform: translateY(0); opacity: 1; }
-  #toast.ok    { border-color: var(--success); color: var(--success); }
-  #toast.error { border-color: var(--error);   color: var(--error); }
-  #toast.warn  { border-color: var(--warn);    color: var(--warn); }
+  #toast.show { transform: translateY(0); opacity: 1; }
+  #toast.ok { border-color: var(--success); color: var(--success); }
+  #toast.error { border-color: var(--error); color: var(--error); }
 
-  ::-webkit-scrollbar { width: 5px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  /* Device list */
+  .device-card {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 10px; padding: 16px; margin-bottom: 14px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .device-top { display: flex; align-items: center; justify-content: space-between; }
+  .device-meta { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--muted); }
 
-  /* Discovery card — full-width */
-  .card.wide { max-width: 960px; flex-basis: 100%; }
-
-  /* Chip / tag input */
+  /* Subnet scan chips */
   .chip-wrap {
     display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
     background: var(--panel); border: 1px solid var(--border);
-    border-radius: 6px; padding: 6px 10px; cursor: text; min-height: 42px;
-    transition: border-color 0.2s, box-shadow 0.2s;
+    border-radius: 8px; padding: 8px 12px; cursor: text; min-height: 44px;
   }
-  .chip-wrap:focus-within { border-color: var(--accent); box-shadow: 0 0 0 2px var(--glow); }
   .chip {
     display: flex; align-items: center; gap: 5px;
     background: #7b61ff18; border: 1px solid var(--accent);
-    border-radius: 4px; padding: 2px 8px;
+    border-radius: 4px; padding: 3px 8px;
     font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--accent);
   }
-  .chip-x {
-    background: none; border: none; color: var(--accent); cursor: pointer;
-    padding: 0; font-size: 1rem; line-height: 1; opacity: 0.7;
-  }
-  .chip-x:hover { opacity: 1; }
-  .chip-text {
-    border: none; background: transparent; color: var(--text); outline: none;
-    font-family: 'JetBrains Mono', monospace; font-size: 0.82rem;
-    flex: 1; min-width: 150px;
-  }
-  .chip-hint { font-size: 0.75rem; color: var(--muted); margin-top: 5px; }
+  .chip-x { background: none; border: none; color: var(--accent); cursor: pointer; padding: 0; }
+  .chip-text { border: none; background: transparent; color: var(--text); outline: none; font-family:'JetBrains Mono',monospace; flex: 1; }
 
-  /* Scan status bar */
-  .scan-status {
-    display: none; align-items: center; gap: 10px; margin-top: 14px;
-    font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; color: var(--muted);
-  }
-  .scan-status.visible { display: flex; }
   .spin {
     width: 14px; height: 14px; border: 2px solid var(--border);
     border-top-color: var(--accent); border-radius: 50%;
-    animation: spin 0.7s linear infinite; flex-shrink: 0;
+    animation: spin 0.7s linear infinite; display: inline-block;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
-
-  /* Device result grid */
-  .device-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-    gap: 12px; margin-top: 16px;
-  }
-  .device-card {
-    background: var(--panel); border: 1px solid var(--border);
-    border-radius: 8px; padding: 14px; display: flex; flex-direction: column; gap: 8px;
-    transition: border-color 0.15s;
-  }
-  .device-card:hover { border-color: var(--accent); }
-  .device-name {
-    font-weight: 600; font-size: 0.9rem;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
-  .device-ip {
-    font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; color: var(--muted);
-  }
-  .device-badge {
-    display: inline-block; font-family: 'JetBrains Mono', monospace; font-size: 0.65rem;
-    font-weight: 700; letter-spacing: 0.06em; padding: 2px 7px; border-radius: 4px;
-  }
-  .badge-matrix { background: #7b61ff22; color: var(--accent); border: 1px solid var(--accent); }
-  .badge-strip  { background: #4ecca322; color: var(--success); border: 1px solid var(--success); }
-  .device-dims  { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--text); }
-  .device-ver   { font-family: 'JetBrains Mono', monospace; font-size: 0.68rem; color: var(--muted); }
-  .device-card button { margin-top: auto; width: 100%; }
 </style>
 </head>
 <body>
+
 <header>
   <div class="logo">
     ⚙ WLED Admin
     <span class="admin-badge">ADMIN</span>
   </div>
   <div class="header-right">
-    <a href="/" class="go-public">← Public UI</a>
+    <a href="/" class="go-public">← Open Public UI</a>
   </div>
 </header>
 
+<div class="admin-nav">
+  <button class="tab-btn active" onclick="switchTab('house')">🏠 House &amp; Yard Layout</button>
+  <button class="tab-btn" onclick="switchTab('controllers')">⚡ WLED Controllers</button>
+  <button class="tab-btn" onclick="switchTab('settings')">🖥 Default View &amp; Settings</button>
+</div>
+
 <main>
-  <!-- ── Connection card ── -->
-  <div class="card">
-    <div class="card-title">⚡ WLED Connection</div>
+  <!-- ════════════════════════════════════════════════════════════════════════
+       TAB 1: HOUSE & YARD LAYOUT DESIGNER
+       ════════════════════════════════════════════════════════════════════════ -->
+  <div class="tab-pane active" id="pane-house">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">🏠 House Architecture (Interactive Visual Drag &amp; Drop)</div>
+        <div class="btn-row">
+          <button class="btn-success" onclick="saveAllConfig()">Save Layout</button>
+        </div>
+      </div>
 
-    <div class="field">
-      <label>WLED IP address</label>
-      <input type="text" id="wled-ip" placeholder="192.168.1.50" />
+      <!-- Live Interactive House SVG Preview -->
+      <div class="house-preview-wrap" id="admin-house-preview">
+        <!-- Injected by JS -->
+      </div>
+      <div class="preview-hint">💡 Tip: Click and drag any window directly on the house to reposition it! Drag the purple corner dot to resize.</div>
+
+      <div class="input-row" style="margin-top:14px; margin-bottom:16px">
+        <div class="field">
+          <label>House Stories</label>
+          <div class="btn-row">
+            <button class="btn-secondary" id="btn-story-1" onclick="setStories(1)">1 Story</button>
+            <button class="btn-secondary" id="btn-story-2" onclick="setStories(2)">2 Stories</button>
+            <button class="btn-secondary" id="btn-story-3" onclick="setStories(3)">3 Stories</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Wall Color</label>
+          <input type="text" id="house-wall-color" value="#1d2333" onchange="updatePreview()" />
+        </div>
+        <div class="field">
+          <label>Trim Color</label>
+          <input type="text" id="house-trim-color" value="#475175" onchange="updatePreview()" />
+        </div>
+        <div class="field">
+          <label>Roof Color</label>
+          <input type="text" id="house-roof-color" value="#121520" onchange="updatePreview()" />
+        </div>
+      </div>
     </div>
 
-    <div class="btn-row">
-      <button class="btn-primary" onclick="pingAndDetect()">Connect &amp; Auto-Detect</button>
-    </div>
+    <!-- Light Strings & Windows List -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">✨ Configured Light Strings &amp; Windows</div>
+        <div class="btn-row">
+          <button class="btn-primary" onclick="openAddWindowModal()">＋ Add Window</button>
+          <button class="btn-secondary" onclick="openAddLineModal()">＋ Add Line / Strip</button>
+        </div>
+      </div>
 
-    <div class="info-box" id="info-box">
-      <div class="info-row"><span class="info-key">Device</span><span class="info-val" id="det-name">—</span></div>
-      <div class="info-row"><span class="info-key">Mode</span><span class="info-val" id="det-mode">—</span></div>
-      <div class="info-row"><span class="info-key">Dimensions</span><span class="info-val" id="det-dims">—</span></div>
-      <div class="info-row"><span class="info-key">LED count</span><span class="info-val" id="det-count">—</span></div>
-      <div class="info-row"><span class="info-key">WLED version</span><span class="info-val" id="det-ver">—</span></div>
+      <div id="elements-list-container">
+        <!-- Rendered by JS -->
+      </div>
     </div>
   </div>
 
-  <!-- ── Grid & Display card ── -->
-  <div class="card">
-    <div class="card-title">◫ Grid &amp; Display</div>
+  <!-- ════════════════════════════════════════════════════════════════════════
+       TAB 2: WLED CONTROLLERS & DISCOVERY
+       ════════════════════════════════════════════════════════════════════════ -->
+  <div class="tab-pane" id="pane-controllers">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">⚡ Connected WLED Controllers</div>
+        <button class="btn-primary" onclick="openAddControllerModal()">＋ Add Controller</button>
+      </div>
 
-    <div id="matrix-note" style="display:none;margin-bottom:14px;padding:10px 12px;
-      background:#7b61ff11;border:1px solid var(--accent);border-radius:6px;
-      font-size:0.78rem;color:var(--accent)">
-      ✓ Matrix dimensions were auto-detected from WLED. You can override them below.
+      <div id="controllers-list">
+        <!-- List injected by JS -->
+      </div>
+    </div>
+
+    <!-- Discovery Card -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">◎ Auto-Discovery (mDNS + Subnet Scan)</div>
+        <button class="btn-primary" onclick="startDiscovery()">Discover Devices</button>
+      </div>
+
+      <div class="field">
+        <label>Subnets to scan</label>
+        <div class="chip-wrap" id="chip-wrap" onclick="document.getElementById('subnet-input').focus()">
+          <input type="text" class="chip-text" id="subnet-input" placeholder="e.g. 192.168.1 then Enter" onkeydown="onSubnetKeydown(event)" />
+        </div>
+      </div>
+
+      <div id="scan-status" style="display:none; align-items:center; gap:8px; margin: 12px 0; font-family:'JetBrains Mono',monospace; font-size:0.75rem; color:var(--muted)">
+        <div class="spin"></div>
+        <span id="scan-label">Scanning…</span>
+      </div>
+
+      <div id="discovered-grid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap:12px; margin-top:14px;">
+        <!-- Discovered devices injected by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════════════════
+       TAB 3: DEFAULT VIEW & SETTINGS
+       ════════════════════════════════════════════════════════════════════════ -->
+  <div class="tab-pane" id="pane-settings">
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title" style="margin-bottom:16px">🖥 Default View &amp; Access Isolation</div>
+        <p style="font-size:0.82rem; color:var(--muted); margin-bottom:16px">
+          Select which view opens by default when visitors navigate to <code style="font-family:'JetBrains Mono',monospace; color:var(--text)">/</code>.
+        </p>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <button class="btn-secondary" id="btn-def-house" onclick="setDefaultMode('house')" style="text-align:left; padding:12px 16px;">
+            🏠 <b>House &amp; Yard Lights (Real Space)</b><br/>
+            <span style="font-size:0.75rem; color:var(--muted)">Recommended: lets anyone color pixels directly on the house</span>
+          </button>
+          <button class="btn-secondary" id="btn-def-desktop" onclick="setDefaultMode('desktop')" style="text-align:left; padding:12px 16px;">
+            ⊞ <b>Desktop 2D Matrix</b><br/>
+            <span style="font-size:0.75rem; color:var(--muted)">Traditional pixel grid editor</span>
+          </button>
+          <button class="btn-secondary" id="btn-def-tablet" onclick="setDefaultMode('tablet')" style="text-align:left; padding:12px 16px;">
+            📱 <b>Tablet / Touch Grid</b><br/>
+            <span style="font-size:0.75rem; color:var(--muted)">Touch-optimized full-viewport matrix</span>
+          </button>
+          <button class="btn-secondary" id="btn-def-strip" onclick="setDefaultMode('strip')" style="text-align:left; padding:12px 16px;">
+            ━ <b>1D LED Strip</b><br/>
+            <span style="font-size:0.75rem; color:var(--muted)">Linear strip view</span>
+          </button>
+        </div>
+
+        <div class="checkbox-row" style="margin-top:16px; border-top:1px solid var(--border); padding-top:14px">
+          <input type="checkbox" id="setting-view-switching" />
+          <label for="setting-view-switching">Allow Public View Switching</label>
+        </div>
+        <p style="font-size:0.75rem; color:var(--muted); margin-top:2px">
+          When unchecked (default), visitors cannot switch views. Each view (/house, /desktop, /tablet) is completely isolated with no navigation links away from it. Perfect for pointing your reverse proxy directly to the specific view you want public users to access!
+        </p>
+      </div>
+
+      <div class="card">
+        <div class="card-title" style="margin-bottom:16px">💡 Granular Precision &amp; Refresh</div>
+
+        <div class="field">
+          <label>Default Brightness: <span id="bri-val" style="font-family:'JetBrains Mono',monospace; color:var(--accent)">128</span></label>
+          <input type="range" id="setting-bri" min="0" max="255" value="128"
+                 oninput="document.getElementById('bri-val').textContent=this.value" />
+        </div>
+
+        <div class="field" style="margin-top:14px; border-top:1px solid var(--border); padding-top:12px">
+          <label>Brush Hit Radius / Precision: <span id="brush-radius-val" style="font-family:'JetBrains Mono',monospace; color:var(--accent)">10px</span></label>
+          <input type="range" id="setting-brush-radius" min="4" max="30" value="10"
+                 oninput="document.getElementById('brush-radius-val').textContent=this.value+'px'" />
+          <p style="font-size:0.72rem; color:var(--muted); margin-top:4px">4px = fine single-pixel precision; 26px = broad finger swipe sweeps.</p>
+        </div>
+
+        <div class="checkbox-row">
+          <input type="checkbox" id="setting-single-pixel-tap" checked />
+          <label for="setting-single-pixel-tap">Single-Pixel Tap Mode (single click always colors exactly 1 LED)</label>
+        </div>
+
+        <div class="checkbox-row" style="margin-top:8px">
+          <input type="checkbox" id="setting-release-live" checked />
+          <label for="setting-release-live">Release Live UDP Override on Clear Canvas (Returns WLED to regular controls)</label>
+        </div>
+
+        <div class="field" style="margin-top:10px">
+          <label>Keepalive Interval (seconds)</label>
+          <input type="number" id="setting-keepalive" value="60" min="0" max="300" />
+          <p style="font-size:0.72rem; color:var(--muted); margin-top:4px">Server resends canvas to WLED every N seconds. Set to 0 to disable keepalive broadcasts completely so WLED isn't held in live mode between sessions.</p>
+        </div>
+        <div class="field">
+          <label>UDP Realtime Port</label>
+          <input type="number" id="setting-udp-port" value="21329" />
+        </div>
+
+        <div style="margin-top:20px">
+          <button class="btn-success" onclick="saveAllConfig()" style="width:100%">Save Settings</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Digital Art Frame / Slideshow Settings -->
+    <div class="card" style="margin-top:20px; border-color:rgba(123,97,255,0.3); background:rgba(123,97,255,0.04);">
+      <div class="card-title" style="margin-bottom:12px; color:var(--accent);">🖼️ Ambient Art Frame / Slideshow Mode</div>
+      <p style="font-size:0.82rem; color:var(--muted); margin-bottom:14px;">
+        Automatically cycles through saved Gallery creations on connected matrices when inactive, transforming your LED matrices into a living digital art display.
+      </p>
+
+      <div class="checkbox-row">
+        <input type="checkbox" id="setting-slideshow-enabled" />
+        <label for="setting-slideshow-enabled">Enable Ambient Slideshow when Idle</label>
+      </div>
+
+      <div class="input-row" style="margin-top:12px;">
+        <div class="field">
+          <label>Start After Inactivity (minutes)</label>
+          <input type="number" id="setting-slideshow-idle" min="1" max="60" value="3" />
+        </div>
+        <div class="field">
+          <label>Transition Every (seconds)</label>
+          <input type="number" id="setting-slideshow-interval" min="5" max="600" value="45" />
+        </div>
+      </div>
+
+      <div style="margin-top:14px;">
+        <button class="btn-primary" onclick="saveAllConfig()">Save Slideshow Settings</button>
+      </div>
+    </div>
+
+    <!-- Danger strip control -->
+    <div class="card">
+      <div class="card-title" style="margin-bottom:14px; color:var(--error)">🗑 Master Control</div>
+      <p style="font-size:0.82rem; color:var(--muted); margin-bottom:16px">
+        Turn off all LEDs immediately and release WLED devices to their native effects.
+      </p>
+      <button class="btn-danger" onclick="clearAllLights()">Clear All Lights</button>
+    </div>
+  </div>
+</main>
+
+<!-- ════════════════════════════════════════════════════════════════════════
+     MODALS
+     ════════════════════════════════════════════════════════════════════════ -->
+
+<!-- Controller Presets Modal -->
+<div class="modal-backdrop" id="modal-presets">
+  <div class="modal-card" style="max-width:540px; max-height:85vh; display:flex; flex-direction:column;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+      <h3 id="modal-presets-title" style="margin:0;">✨ Controller Presets</h3>
+      <button class="btn-secondary" onclick="closeModal('modal-presets')">✕</button>
+    </div>
+
+    <div style="background:rgba(46, 204, 113, 0.12); border:1px solid rgba(46, 204, 113, 0.35); border-radius:8px; padding:10px 14px; margin-bottom:14px; display:flex; align-items:center; justify-content:space-between; gap:10px;">
+      <div>
+        <div style="font-weight:600; font-size:0.8rem; color:#2ecc71;">🎮 Release Live Override</div>
+        <div style="font-size:0.7rem; color:var(--muted); margin-top:2px;">Drops live UDP streaming so WLED returns to its regular controls.</div>
+      </div>
+      <button id="modal-presets-release-btn" class="btn-success" style="padding:6px 12px; font-size:0.75rem;">Release Live</button>
+    </div>
+
+    <div id="admin-presets-list" style="flex:1; overflow-y:auto; min-height:140px; padding-right:4px;">
+      <!-- Populated by JS -->
+    </div>
+
+    <div class="btn-row" style="margin-top:16px; justify-content:flex-end;">
+      <button class="btn-secondary" onclick="closeModal('modal-presets')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add / Edit Window Modal -->
+<div class="modal-backdrop" id="modal-window">
+  <div class="modal-card">
+    <h3 id="modal-window-title">Add Window to House</h3>
+    <input type="hidden" id="win-id" />
+
+    <div class="field">
+      <label>Window Name / Location</label>
+      <input type="text" id="win-name" placeholder="e.g. 2nd Floor Right Bedroom" />
+    </div>
+
+    <!-- Quick Alignment Buttons -->
+    <div class="field">
+      <label>Quick Alignment / Placement</label>
+      <div class="btn-row" style="margin-bottom:6px">
+        <button type="button" class="btn-secondary" onclick="quickAlignWindow('left')">⇱ Left (x:240)</button>
+        <button type="button" class="btn-secondary" onclick="quickAlignWindow('center')">⇹ Center (x:455)</button>
+        <button type="button" class="btn-secondary" onclick="quickAlignWindow('right')">⇲ Right (x:670)</button>
+      </div>
+      <div class="btn-row">
+        <button type="button" class="btn-secondary" onclick="quickSizeWindow('small')">Small (80×90)</button>
+        <button type="button" class="btn-secondary" onclick="quickSizeWindow('medium')">Medium (100×110)</button>
+        <button type="button" class="btn-secondary" onclick="quickSizeWindow('large')">Large / Bay (140×120)</button>
+      </div>
     </div>
 
     <div class="input-row">
       <div class="field">
-        <label>Columns (W)</label>
-        <input type="number" id="grid-cols" value="16" min="1" max="256" />
+        <label>Story Floor</label>
+        <select id="win-story" onchange="autoPositionWindow()">
+          <option value="1">1st Floor</option>
+          <option value="2" selected>2nd Floor</option>
+          <option value="3">3rd Floor</option>
+        </select>
       </div>
       <div class="field">
-        <label>Rows (H)</label>
-        <input type="number" id="grid-rows" value="1" min="1" max="256" />
+        <label>Assigned WLED Controller</label>
+        <select id="win-controller"></select>
+      </div>
+    </div>
+
+    <div class="input-row">
+      <div class="field">
+        <label>Start LED #</label>
+        <input type="number" id="win-start-led" value="0" min="0" oninput="syncWindowEndLed()" />
+      </div>
+      <div class="field">
+        <label>LED Count</label>
+        <input type="number" id="win-led-count" value="40" min="1" oninput="syncWindowEndLed()" />
+      </div>
+      <div class="field">
+        <label>End LED #</label>
+        <input type="number" id="win-end-led" value="39" min="0" oninput="syncWindowEndLedFromSelf()" />
+      </div>
+    </div>
+
+    <!-- Fine Position Controls with Sliders -->
+    <div style="background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:12px; margin-bottom:16px">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px">
+        <label style="margin:0">Position X (Horizontal)</label>
+        <span id="win-x-val" style="font-family:'JetBrains Mono',monospace; color:var(--accent)">250</span>
+      </div>
+      <input type="range" id="win-x" min="100" max="850" value="250" oninput="onWinSliderChange()" />
+
+      <div style="display:flex; justify-content:space-between; align-items:center; margin:8px 0 4px">
+        <label style="margin:0">Position Y (Vertical)</label>
+        <span id="win-y-val" style="font-family:'JetBrains Mono',monospace; color:var(--accent)">280</span>
+      </div>
+      <input type="range" id="win-y" min="50" max="550" value="280" oninput="onWinSliderChange()" />
+
+      <div class="input-row" style="margin-top:10px">
+        <div class="field">
+          <label>Width: <span id="win-w-val" style="color:var(--accent)">90</span></label>
+          <input type="range" id="win-w" min="40" max="250" value="90" oninput="onWinSliderChange()" />
+        </div>
+        <div class="field">
+          <label>Height: <span id="win-h-val" style="color:var(--accent)">100</span></label>
+          <input type="range" id="win-h" min="40" max="250" value="100" oninput="onWinSliderChange()" />
+        </div>
+      </div>
+    </div>
+
+    <div class="input-row">
+      <div class="field">
+        <label>Start Corner</label>
+        <select id="win-corner">
+          <option value="bottom-left">Bottom-Left</option>
+          <option value="top-left">Top-Left</option>
+          <option value="top-right">Top-Right</option>
+          <option value="bottom-right">Bottom-Right</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Wiring Direction</label>
+        <select id="win-direction">
+          <option value="clockwise">Clockwise</option>
+          <option value="counter-clockwise">Counter-Clockwise</option>
+        </select>
       </div>
     </div>
 
     <div class="checkbox-row">
-      <input type="checkbox" id="serpentine" />
-      <label for="serpentine">Serpentine wiring (odd rows run right→left)</label>
+      <input type="checkbox" id="win-reverse" />
+      <label for="win-reverse">Reverse Wiring Order</label>
     </div>
 
-    <div style="margin-top:20px">
-      <label>Default brightness <span class="val-label" id="bri-label">128</span></label>
-      <input type="range" id="brightness" min="0" max="255" value="128"
-        oninput="document.getElementById('bri-label').textContent=this.value" />
-    </div>
-
-    <div style="margin-top:20px" class="btn-row">
-      <button class="btn-success" onclick="saveConfig()">Save Config</button>
-      <span class="saved-pill" id="saved-pill">✓ saved</span>
+    <div class="btn-row" style="margin-top:20px; justify-content:flex-end">
+      <button class="btn-secondary" onclick="testWindowPhysically()">⚡ Test / Blink on House</button>
+      <button class="btn-secondary" onclick="closeModal('modal-window')">Cancel</button>
+      <button class="btn-primary" onclick="saveWindowElement()">Save Window</button>
     </div>
   </div>
+</div>
 
-  <!-- ── Discovery card ── -->
-  <div class="card wide">
-    <div class="card-title">◎ Device Discovery</div>
+<!-- Add / Edit Line / Strip Modal -->
+<div class="modal-backdrop" id="modal-line">
+  <div class="modal-card">
+    <h3 id="modal-line-title">Add Line / Strip</h3>
+    <input type="hidden" id="line-id" />
 
-    <label style="font-size:0.8rem;color:var(--muted);display:block;margin-bottom:6px">
-      Subnets to scan
-    </label>
-    <div class="chip-wrap" id="chip-wrap" onclick="document.getElementById('subnet-input').focus()">
-      <!-- chips injected here by JS -->
-      <input type="text" class="chip-text" id="subnet-input"
-             placeholder="Add subnet, e.g. 192.168.2  then Enter"
-             onkeydown="subnetKeydown(event)"
-             oninput="updateScanHint()" />
-    </div>
-    <div class="chip-hint" id="scan-hint"></div>
-
-    <div style="margin-top:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-      <button class="btn-primary" onclick="startDiscovery()">Discover Devices</button>
+    <div class="field">
+      <label>Line Name / Location</label>
+      <input type="text" id="line-name" placeholder="e.g. Main Roof Peak, Front Walkway" />
     </div>
 
-    <div class="scan-status" id="scan-status">
-      <div class="spin"></div>
-      <span id="scan-label">Scanning…</span>
+    <div class="input-row">
+      <div class="field">
+        <label>Category</label>
+        <select id="line-category">
+          <option value="house">House (Roof, Gutter, Pillars)</option>
+          <option value="yard">Yard (Walkway, Trees, Lawn Stakes)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Preset Shape</label>
+        <select id="line-preset" onchange="applyLinePreset(this.value)">
+          <option value="roof_peak">Roof Peak (Gable Peak)</option>
+          <option value="roof_fascia">Horizontal Fascia / Gutter</option>
+          <option value="pillar">Vertical Pillar / Corner</option>
+          <option value="walkway">Yard Walkway Curve</option>
+          <option value="tree">Tree Wrap / Spiral</option>
+          <option value="custom">Custom Polyline Points</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Assigned WLED Controller</label>
+        <select id="line-controller"></select>
+      </div>
     </div>
 
-    <div class="device-grid" id="device-grid"></div>
+    <div class="input-row">
+      <div class="field">
+        <label>Start LED #</label>
+        <input type="number" id="line-start-led" value="0" min="0" oninput="syncLineEndLed()" />
+      </div>
+      <div class="field">
+        <label>LED Count</label>
+        <input type="number" id="line-led-count" value="60" min="1" oninput="syncLineEndLed()" />
+      </div>
+      <div class="field">
+        <label>End LED #</label>
+        <input type="number" id="line-end-led" value="59" min="0" oninput="syncLineLedCount()" />
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Path Points (JSON array of {x, y} coordinates)</label>
+      <input type="text" id="line-points" value='[{"x":150,"y":250},{"x":500,"y":80},{"x":850,"y":250}]' />
+    </div>
+
+    <div class="checkbox-row">
+      <input type="checkbox" id="line-reverse" />
+      <label for="line-reverse">Reverse Wiring Order</label>
+    </div>
+
+    <div class="btn-row" style="margin-top:20px; justify-content:flex-end">
+      <button class="btn-secondary" onclick="testLinePhysically()">⚡ Test / Blink on House</button>
+      <button class="btn-secondary" onclick="closeModal('modal-line')">Cancel</button>
+      <button class="btn-primary" onclick="saveLineElement()">Save Line</button>
+    </div>
   </div>
+</div>
 
-  <!-- ── Interface card ── -->
-  <div class="card" style="max-width:460px">
-    <div class="card-title">🖥 Default View</div>
-    <p style="font-size:0.82rem;color:var(--muted);margin-bottom:16px">
-      Choose which painter opens when visitors go to <code style="font-family:'JetBrains Mono',monospace;font-size:0.8rem;color:var(--text)">/</code>.
-      Both views are always available at <code style="font-family:'JetBrains Mono',monospace;font-size:0.8rem;color:var(--text)">/desktop</code> and <code style="font-family:'JetBrains Mono',monospace;font-size:0.8rem;color:var(--text)">/tablet</code>.
-    </p>
-    <div class="btn-row">
-      <button id="btn-default-desktop" class="btn-primary"   onclick="setDefaultMode('desktop')">Desktop</button>
-      <button id="btn-default-tablet"  class="btn-secondary" onclick="setDefaultMode('tablet')">Tablet / Mobile</button>
+<!-- Add / Edit Controller Modal -->
+<div class="modal-backdrop" id="modal-controller">
+  <div class="modal-card" style="max-width:540px;">
+    <h3 id="ctrl-modal-title">Add WLED Controller</h3>
+    <input type="hidden" id="ctrl-id" />
+
+    <div class="field">
+      <label>Controller Name</label>
+      <input type="text" id="ctrl-name" placeholder="e.g. Living Room Matrix" />
+    </div>
+
+    <div class="input-row">
+      <div class="field" style="flex:2">
+        <label>IP Address</label>
+        <input type="text" id="ctrl-ip" placeholder="e.g. 192.168.1.50" />
+      </div>
+      <div class="field" style="flex:1">
+        <label>UDP Port</label>
+        <input type="number" id="ctrl-port" value="21329" />
+      </div>
+    </div>
+
+    <!-- PIN CODE CONFIGURATION -->
+    <div class="field" style="background:rgba(123,97,255,0.08); border:1px solid rgba(123,97,255,0.35); padding:14px; border-radius:10px; margin-top:8px;">
+      <label style="color:var(--accent); font-weight:600; display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <span>🔑 Mobile Matrix Access PIN</span>
+        <button type="button" class="btn-secondary" style="font-size:0.75rem; padding:3px 10px;" onclick="generateRandomCtrlPin()">🎲 Random PIN</button>
+      </label>
+      <div style="display:flex; gap:10px; align-items:center;">
+        <input type="text" id="ctrl-pin" placeholder="e.g. 1001" style="font-family:'JetBrains Mono',monospace; font-size:1.15rem; letter-spacing:0.12em; font-weight:700; color:#fff;" />
+      </div>
+      <div style="font-size:0.75rem; color:var(--muted); margin-top:6px;">
+        Users enter this PIN on their phone to paint on this matrix. The PIN is never exposed in their browser URL or displayed on the painting screen.
+      </div>
+    </div>
+
+    <!-- 2D MATRIX SETTINGS -->
+    <div class="field" style="margin-top:12px; background:var(--surface); border:1px solid var(--border); padding:14px; border-radius:10px;">
+      <div style="display:flex; align-items:center; justify-content:space-between;">
+        <label style="cursor:pointer; display:flex; align-items:center; gap:8px; margin:0; font-weight:600; color:var(--text);">
+          <input type="checkbox" id="ctrl-is-matrix" onchange="toggleCtrlMatrixFields()" style="accent-color:var(--accent); width:18px; height:18px;" />
+          <span>Is 2D LED Matrix?</span>
+        </label>
+        <span style="font-size:0.75rem; color:var(--accent);" id="ctrl-matrix-badge">Grid layout</span>
+      </div>
+
+      <div id="ctrl-matrix-fields" style="margin-top:12px; display:none;">
+        <div class="input-row">
+          <div class="field">
+            <label>Columns (Width)</label>
+            <input type="number" id="ctrl-cols" value="16" min="1" max="128" oninput="calcCtrlMatrixLeds()" />
+          </div>
+          <div class="field">
+            <label>Rows (Height)</label>
+            <input type="number" id="ctrl-rows" value="16" min="1" max="128" oninput="calcCtrlMatrixLeds()" />
+          </div>
+        </div>
+        <div style="margin-top:8px;">
+          <label style="cursor:pointer; display:flex; align-items:center; gap:8px; font-size:0.85rem; color:var(--text);">
+            <input type="checkbox" id="ctrl-serpentine" style="accent-color:var(--accent); width:16px; height:16px;" />
+            <span>Serpentine wiring (alternate row zigzag)</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="field" style="margin-top:10px">
+      <label>Total LED Count</label>
+      <input type="number" id="ctrl-leds" value="256" min="1" />
+    </div>
+
+    <div class="btn-row" style="margin-top:14px">
+      <button class="btn-secondary" onclick="pingAndDetectController()">⚡ Ping &amp; Auto-Detect</button>
+    </div>
+
+    <div class="btn-row" style="margin-top:20px; justify-content:flex-end">
+      <button class="btn-secondary" onclick="closeModal('modal-controller')">Cancel</button>
+      <button class="btn-primary" onclick="saveController()">Save Controller</button>
     </div>
   </div>
+</div>
 
-  <!-- ── Danger card ── -->
-  <div class="card" style="max-width:460px">
-    <div class="card-title">🗑 Strip Control</div>
-    <p style="font-size:0.82rem;color:var(--muted);margin-bottom:16px">
-      Send a blank frame to turn off all LEDs on the connected strip.
-    </p>
-    <button class="btn-danger" onclick="clearWled()">Clear WLED Strip (all off)</button>
-  </div>
-</main>
-
-<div id="toast"></div>
+<div id="toast">Saved ✓</div>
 
 <script>
-// ── Boot ──────────────────────────────────────────────────────────────────────
-window.addEventListener("DOMContentLoaded", loadCurrentConfig);
+let fullConfig = null;
+let currentStories = 2;
+let selectedElementId = null;
 
-async function loadCurrentConfig() {
-  try {
-    const res  = await fetch("/api/config");
-    const data = await res.json();
-    if (!data.ok) return;
-    const c = data.config;
-    document.getElementById("grid-cols").value  = c.cols       ?? 16;
-    document.getElementById("grid-rows").value  = c.rows       ?? 1;
-    document.getElementById("serpentine").checked = c.serpentine ?? false;
-    document.getElementById("brightness").value = c.brightness  ?? 128;
-    document.getElementById("bri-label").textContent = c.brightness ?? 128;
+// Visual Drag State on Admin Preview
+let isDraggingPreview = false;
+let dragMode = null; // 'move' | 'resize'
+let draggedWin = null;
+let dragStartMouse = { x: 0, y: 0 };
+let dragStartRect = { x: 0, y: 0, w: 0, h: 0 };
 
-    updateDefaultModeUI(c.defaultMode ?? "desktop");
+// ── Tab Management ────────────────────────────────────────────────────────────
+function switchTab(tabId) {
+  document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+  document.querySelectorAll(".tab-pane").forEach(p => p.classList.remove("active"));
 
-    subnets = c.scanSubnets ?? [];
-    renderChips();
-
-    if (c.deviceName) {
-      // show a read-only info summary from saved config
-      showDetected({
-        name:      c.deviceName,
-        isMatrix:  c.isMatrix,
-        cols:      c.cols,
-        rows:      c.rows,
-        ledCount:  c.ledCount,
-        ver:       null,
-      });
-    }
-  } catch (e) {
-    toast("Could not load config from server", "error");
+  if (tabId === "house") {
+    document.querySelector(".tab-btn:nth-child(1)").classList.add("active");
+    document.getElementById("pane-house").classList.add("active");
+  } else if (tabId === "controllers") {
+    document.querySelector(".tab-btn:nth-child(2)").classList.add("active");
+    document.getElementById("pane-controllers").classList.add("active");
+  } else {
+    document.querySelector(".tab-btn:nth-child(3)").classList.add("active");
+    document.getElementById("pane-settings").classList.add("active");
   }
 }
 
-function updateDefaultModeUI(mode) {
-  document.getElementById("btn-default-desktop").className = mode === "desktop" ? "btn-primary" : "btn-secondary";
-  document.getElementById("btn-default-tablet").className  = mode === "tablet"  ? "btn-primary" : "btn-secondary";
+// ── Sync LED Numbers ──────────────────────────────────────────────────────────
+function syncWindowEndLed() {
+  const start = parseInt(document.getElementById("win-start-led").value) || 0;
+  const count = parseInt(document.getElementById("win-led-count").value) || 1;
+  document.getElementById("win-end-led").value = start + count - 1;
+}
+function syncWindowEndLedFromSelf() {
+  const start = parseInt(document.getElementById("win-start-led").value) || 0;
+  const end = parseInt(document.getElementById("win-end-led").value) || start;
+  document.getElementById("win-led-count").value = Math.max(1, end - start + 1);
 }
 
-async function setDefaultMode(mode) {
-  try {
-    const res  = await fetch("/api/config", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ defaultMode: mode }),
-    });
-    const data = await res.json();
-    if (data.ok) {
-      updateDefaultModeUI(mode);
-      toast(`Default view set to ${mode} ✓`, "ok");
-    } else {
-      toast(data.error, "error");
+function syncLineEndLed() {
+  const start = parseInt(document.getElementById("line-start-led").value) || 0;
+  const count = parseInt(document.getElementById("line-led-count").value) || 1;
+  document.getElementById("line-end-led").value = start + count - 1;
+}
+function syncLineLedCount() {
+  const start = parseInt(document.getElementById("line-start-led").value) || 0;
+  const end = parseInt(document.getElementById("line-end-led").value) || start;
+  document.getElementById("line-led-count").value = Math.max(1, end - start + 1);
+}
+
+// ── Modal Helpers ─────────────────────────────────────────────────────────────
+function closeModal(id) {
+  document.getElementById(id).classList.remove("open");
+}
+
+function populateControllerDropdowns() {
+  const winSelect  = document.getElementById("win-controller");
+  const lineSelect = document.getElementById("line-controller");
+  const instances  = fullConfig?.instances || [];
+
+  let options = instances.map(inst => `
+    <option value="${inst.id}">${inst.name} (${inst.ip || 'no ip'} · ${inst.ledCount} LEDs)</option>
+  `).join("");
+
+  if (!options) options = `<option value="inst_1">Default WLED</option>`;
+  winSelect.innerHTML  = options;
+  lineSelect.innerHTML = options;
+}
+
+// ── House Structure & Interactive Visual Preview ──────────────────────────────
+function setStories(n) {
+  currentStories = n;
+  document.getElementById("btn-story-1").className = n === 1 ? "btn-primary" : "btn-secondary";
+  document.getElementById("btn-story-2").className = n === 2 ? "btn-primary" : "btn-secondary";
+  document.getElementById("btn-story-3").className = n === 3 ? "btn-primary" : "btn-secondary";
+  if (fullConfig?.house) fullConfig.house.stories = n;
+  renderAdminPreview();
+}
+
+function getAdminSvgPoint(e) {
+  const svg = document.querySelector("#admin-house-preview svg");
+  if (!svg) return { x: 0, y: 0 };
+  const pt = svg.createSVGPoint();
+  pt.x = e.clientX;
+  pt.y = e.clientY;
+  return pt.matrixTransform(svg.getScreenCTM().inverse());
+}
+
+function renderAdminPreview() {
+  const wrap = document.getElementById("admin-house-preview");
+  if (!wrap || !fullConfig?.house) return;
+
+  const house = fullConfig.house;
+  const stories = currentStories || house.stories || 2;
+  const wallColor = document.getElementById("house-wall-color").value || house.wallColor || "#1d2333";
+  const trimColor = document.getElementById("house-trim-color").value || house.trimColor || "#475175";
+  const roofColor = document.getElementById("house-roof-color").value || house.roofColor || "#121520";
+
+  let wallY, wallH, peakY, eavesY;
+  if (stories === 1) { wallY = 390; wallH = 180; peakY = 220; eavesY = 390; }
+  else if (stories === 3) { wallY = 150; wallH = 420; peakY = 40; eavesY = 150; }
+  else { wallY = 250; wallH = 320; peakY = 75; eavesY = 250; }
+
+  let svg = `
+    <svg viewBox="0 0 1000 700" xmlns="http://www.w3.org/2000/svg" style="touch-action:none">
+      <!-- Sky -->
+      <rect x="0" y="0" width="1000" height="700" fill="#0d0f18"/>
+      <!-- Yard -->
+      <rect x="0" y="570" width="1000" height="130" fill="#142618"/>
+      <!-- House Walls -->
+      <rect x="180" y="${wallY}" width="640" height="${wallH}" fill="${wallColor}" stroke="${trimColor}" stroke-width="2"/>
+      <!-- Roof -->
+      <polygon points="140,${eavesY} 500,${peakY} 860,${eavesY}" fill="${roofColor}" stroke="${trimColor}" stroke-width="4"/>
+      <!-- Door -->
+      <rect x="470" y="475" width="60" height="95" fill="#882233" stroke="${trimColor}" stroke-width="2"/>
+  `;
+
+  // Draw Lines
+  (house.elements || []).forEach(el => {
+    if (el.type !== "window" && el.points && el.points.length >= 2) {
+      const d = el.points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+      const stroke = el.category === "yard" ? "#4ecca3" : "#ffd166";
+      svg += `<path d="${d}" fill="none" stroke="${stroke}" stroke-width="4" stroke-dasharray="4 2"/>`;
     }
-  } catch (e) {
-    toast("Could not save: " + e.message, "error");
-  }
+  });
+
+  // Draw Interactive Draggable Windows
+  (house.elements || []).forEach(el => {
+    if (el.type === "window") {
+      const isSelected = selectedElementId === el.id;
+      const strokeColor = isSelected ? "#00f0ff" : "#7b61ff";
+      const strokeWidth = isSelected ? "3" : "2";
+
+      svg += `
+        <g class="admin-win-group" data-id="${el.id}" style="cursor:grab">
+          <!-- Window Rect Body -->
+          <rect id="rect-${el.id}" x="${el.x}" y="${el.y}" width="${el.w}" height="${el.h}"
+                fill="#161e30" stroke="${strokeColor}" stroke-width="${strokeWidth}" rx="4"/>
+          <!-- Title Header Bar -->
+          <rect id="bar-${el.id}" x="${el.x}" y="${el.y}" width="${el.w}" height="18"
+                fill="${strokeColor}" opacity="0.35" rx="3"/>
+          <text id="label-${el.id}" x="${el.x + 6}" y="${el.y + 13}" fill="#fff" font-size="10" font-weight="600" font-family="'Space Grotesk',sans-serif">${el.name}</text>
+          <!-- Center LED & Coord info -->
+          <text id="leds-${el.id}" x="${el.x + el.w/2}" y="${el.y + el.h/2 + 2}" fill="#e0e2ec" font-size="11" text-anchor="middle" font-family="'JetBrains Mono',monospace">${el.ledCount} LEDs</text>
+          <text id="pos-${el.id}" x="${el.x + el.w/2}" y="${el.y + el.h/2 + 16}" fill="#747b96" font-size="9" text-anchor="middle" font-family="'JetBrains Mono',monospace">(${el.x}, ${el.y})</text>
+          <!-- Corner Resize Handle -->
+          <circle id="handle-${el.id}" class="admin-resize-handle" data-id="${el.id}" cx="${el.x + el.w}" cy="${el.y + el.h}" r="8" fill="#7b61ff" stroke="#fff" stroke-width="2" style="cursor:nwse-resize"/>
+        </g>
+      `;
+    }
+  });
+
+  svg += `</svg>`;
+  wrap.innerHTML = svg;
+  initPreviewDragEvents();
 }
 
-// ── Connect & auto-detect ─────────────────────────────────────────────────────
-async function pingAndDetect() {
-  const ip = document.getElementById("wled-ip").value.trim();
-  if (!ip) { toast("Enter a WLED IP address", "warn"); return; }
+function initPreviewDragEvents() {
+  const wrap = document.getElementById("admin-house-preview");
+  if (!wrap) return;
 
-  toast("Connecting…", "ok");
+  wrap.onpointerdown = e => {
+    const handle = e.target.closest(".admin-resize-handle");
+    const group  = e.target.closest(".admin-win-group");
 
-  try {
-    const res  = await fetch(`/api/ping?wledIp=${encodeURIComponent(ip)}`);
-    const data = await res.json();
-
-    if (!data.ok) {
-      toast(data.error, "error");
-      showInfoBox("error", data.error);
+    if (handle) {
+      e.preventDefault();
+      const id = handle.dataset.id;
+      draggedWin = fullConfig?.house?.elements?.find(el => el.id === id);
+      if (draggedWin) {
+        isDraggingPreview = true;
+        dragMode = 'resize';
+        selectedElementId = id;
+        dragStartMouse = getAdminSvgPoint(e);
+        dragStartRect = { x: draggedWin.x, y: draggedWin.y, w: draggedWin.w, h: draggedWin.h };
+        wrap.setPointerCapture(e.pointerId);
+      }
       return;
     }
 
-    const d = data.detected;
-    const info = data.info;
-
-    // Update grid fields
-    document.getElementById("grid-cols").value = d.cols;
-    document.getElementById("grid-rows").value = d.rows;
-
-    if (d.isMatrix) {
-      document.getElementById("matrix-note").style.display = "block";
+    if (group) {
+      e.preventDefault();
+      const id = group.dataset.id;
+      draggedWin = fullConfig?.house?.elements?.find(el => el.id === id);
+      if (draggedWin) {
+        isDraggingPreview = true;
+        dragMode = 'move';
+        selectedElementId = id;
+        dragStartMouse = getAdminSvgPoint(e);
+        dragStartRect = { x: draggedWin.x, y: draggedWin.y, w: draggedWin.w, h: draggedWin.h };
+        wrap.setPointerCapture(e.pointerId);
+      }
     }
+  };
 
-    showDetected({
-      name:     info?.name ?? ip,
-      isMatrix: d.isMatrix,
-      cols:     d.cols,
-      rows:     d.rows,
-      ledCount: d.ledCount,
-      ver:      info?.ver ?? null,
-    });
+  wrap.onpointermove = e => {
+    if (!isDraggingPreview || !draggedWin) return;
+    const curr = getAdminSvgPoint(e);
+    const dx = curr.x - dragStartMouse.x;
+    const dy = curr.y - dragStartMouse.y;
 
-    toast(`Connected: ${info?.name ?? ip}`, "ok");
-  } catch (e) {
-    toast("Backend unreachable: " + e.message, "error");
+    if (dragMode === 'move') {
+      draggedWin.x = Math.round(Math.max(50, Math.min(950 - draggedWin.w, dragStartRect.x + dx)));
+      draggedWin.y = Math.round(Math.max(30, Math.min(680 - draggedWin.h, dragStartRect.y + dy)));
+
+      // Update DOM directly for high performance
+      const r = document.getElementById(`rect-${draggedWin.id}`);
+      const b = document.getElementById(`bar-${draggedWin.id}`);
+      const l = document.getElementById(`label-${draggedWin.id}`);
+      const leds = document.getElementById(`leds-${draggedWin.id}`);
+      const pos = document.getElementById(`pos-${draggedWin.id}`);
+      const h = document.getElementById(`handle-${draggedWin.id}`);
+
+      if (r) { r.setAttribute("x", draggedWin.x); r.setAttribute("y", draggedWin.y); }
+      if (b) { b.setAttribute("x", draggedWin.x); b.setAttribute("y", draggedWin.y); }
+      if (l) { l.setAttribute("x", draggedWin.x + 6); l.setAttribute("y", draggedWin.y + 13); }
+      if (leds) { leds.setAttribute("x", draggedWin.x + draggedWin.w/2); leds.setAttribute("y", draggedWin.y + draggedWin.h/2 + 2); }
+      if (pos) { pos.setAttribute("x", draggedWin.x + draggedWin.w/2); pos.setAttribute("y", draggedWin.y + draggedWin.h/2 + 16); pos.textContent = `(${draggedWin.x}, ${draggedWin.y})`; }
+      if (h) { h.setAttribute("cx", draggedWin.x + draggedWin.w); h.setAttribute("cy", draggedWin.y + draggedWin.h); }
+
+      // Update modal inputs if open
+      if (document.getElementById("win-id").value === draggedWin.id) {
+        document.getElementById("win-x").value = draggedWin.x;
+        document.getElementById("win-y").value = draggedWin.y;
+        document.getElementById("win-x-val").textContent = draggedWin.x;
+        document.getElementById("win-y-val").textContent = draggedWin.y;
+      }
+    } else if (dragMode === 'resize') {
+      draggedWin.w = Math.round(Math.max(40, Math.min(350, dragStartRect.w + dx)));
+      draggedWin.h = Math.round(Math.max(40, Math.min(300, dragStartRect.h + dy)));
+
+      const r = document.getElementById(`rect-${draggedWin.id}`);
+      const b = document.getElementById(`bar-${draggedWin.id}`);
+      const leds = document.getElementById(`leds-${draggedWin.id}`);
+      const pos = document.getElementById(`pos-${draggedWin.id}`);
+      const h = document.getElementById(`handle-${draggedWin.id}`);
+
+      if (r) { r.setAttribute("width", draggedWin.w); r.setAttribute("height", draggedWin.h); }
+      if (b) { b.setAttribute("width", draggedWin.w); }
+      if (leds) { leds.setAttribute("x", draggedWin.x + draggedWin.w/2); leds.setAttribute("y", draggedWin.y + draggedWin.h/2 + 2); }
+      if (pos) { pos.setAttribute("x", draggedWin.x + draggedWin.w/2); pos.setAttribute("y", draggedWin.y + draggedWin.h/2 + 16); }
+      if (h) { h.setAttribute("cx", draggedWin.x + draggedWin.w); h.setAttribute("cy", draggedWin.y + draggedWin.h); }
+
+      if (document.getElementById("win-id").value === draggedWin.id) {
+        document.getElementById("win-w").value = draggedWin.w;
+        document.getElementById("win-h").value = draggedWin.h;
+        document.getElementById("win-w-val").textContent = draggedWin.w;
+        document.getElementById("win-h-val").textContent = draggedWin.h;
+      }
+    }
+  };
+
+  wrap.onpointerup = e => {
+    if (isDraggingPreview) {
+      wrap.releasePointerCapture(e.pointerId);
+      isDraggingPreview = false;
+      dragMode = null;
+      draggedWin = null;
+      renderElementsList();
+      toast("Window position updated ✓");
+    }
+  };
+}
+
+function updatePreview() {
+  renderAdminPreview();
+}
+
+// ── Quick Align & Position Helpers for Window Modal ──────────────────────────
+function quickAlignWindow(side) {
+  const w = parseInt(document.getElementById("win-w").value) || 100;
+  let targetX = 240;
+  if (side === 'left') targetX = 240;
+  else if (side === 'center') targetX = Math.round(500 - w / 2);
+  else if (side === 'right') targetX = Math.round(760 - w);
+
+  document.getElementById("win-x").value = targetX;
+  document.getElementById("win-x-val").textContent = targetX;
+  onWinSliderChange();
+}
+
+function quickSizeWindow(size) {
+  let w = 100, h = 110;
+  if (size === 'small') { w = 80; h = 90; }
+  else if (size === 'medium') { w = 100; h = 110; }
+  else if (size === 'large') { w = 140; h = 120; }
+
+  document.getElementById("win-w").value = w;
+  document.getElementById("win-h").value = h;
+  document.getElementById("win-w-val").textContent = w;
+  document.getElementById("win-h-val").textContent = h;
+  onWinSliderChange();
+}
+
+function autoPositionWindow() {
+  const story = parseInt(document.getElementById("win-story").value);
+  let y = 280;
+  if (story === 1) y = 440;
+  else if (story === 2) y = 280;
+  else if (story === 3) y = 170;
+
+  document.getElementById("win-y").value = y;
+  document.getElementById("win-y-val").textContent = y;
+  onWinSliderChange();
+}
+
+function onWinSliderChange() {
+  const x = parseInt(document.getElementById("win-x").value) || 250;
+  const y = parseInt(document.getElementById("win-y").value) || 280;
+  const w = parseInt(document.getElementById("win-w").value) || 90;
+  const h = parseInt(document.getElementById("win-h").value) || 100;
+
+  document.getElementById("win-x-val").textContent = x;
+  document.getElementById("win-y-val").textContent = y;
+  document.getElementById("win-w-val").textContent = w;
+  document.getElementById("win-h-val").textContent = h;
+
+  const currentId = document.getElementById("win-id").value;
+  const el = fullConfig?.house?.elements?.find(e => e.id === currentId);
+  if (el) {
+    el.x = x; el.y = y; el.w = w; el.h = h;
+    renderAdminPreview();
   }
 }
 
-function showDetected({ name, isMatrix, cols, rows, ledCount, ver }) {
-  const box = document.getElementById("info-box");
-  box.className = "info-box visible ok";
+// ── Elements List Rendering ───────────────────────────────────────────────────
+function renderElementsList() {
+  const container = document.getElementById("elements-list-container");
+  if (!container || !fullConfig?.house?.elements) return;
 
-  document.getElementById("det-name").textContent  = name || "—";
+  const elements = fullConfig.house.elements;
+  if (elements.length === 0) {
+    container.innerHTML = `<p style="color:var(--muted); font-size:0.85rem">No light strings or windows configured yet. Click above to add one.</p>`;
+    return;
+  }
 
-  const modeEl = document.getElementById("det-mode");
-  modeEl.textContent  = isMatrix ? "2D Matrix" : "1D Strip";
-  modeEl.className    = "info-val " + (isMatrix ? "matrix" : "strip");
+  let html = "";
+  elements.forEach(el => {
+    const isWin = el.type === "window";
+    const badgeClass = isWin ? "badge-window" : (el.category === "yard" ? "badge-yard" : "badge-house");
+    const badgeLabel = isWin ? "WINDOW" : (el.category === "yard" ? "YARD LINE" : "HOUSE LINE");
+    const endLed = el.startLed + el.ledCount - 1;
+    const inst = fullConfig.instances?.find(i => i.id === el.instanceId);
+    const instName = inst ? inst.name : el.instanceId;
 
-  document.getElementById("det-dims").textContent  = isMatrix ? `${cols} × ${rows}` : `${cols} LEDs × 1`;
-  document.getElementById("det-count").textContent = ledCount ?? "—";
-  document.getElementById("det-ver").textContent   = ver ?? "—";
+    html += `
+      <div class="element-card" style="${selectedElementId === el.id ? 'border-color:var(--accent)' : ''}">
+        <div class="element-info">
+          <div class="element-title">
+            <span class="badge ${badgeClass}">${badgeLabel}</span>
+            <span>${el.name}</span>
+          </div>
+          <div class="element-sub">
+            Controller: <b style="color:var(--text)">${instName}</b> ·
+            LEDs: <b style="color:var(--accent)">${el.startLed} → ${endLed}</b> (${el.ledCount} total)
+            ${isWin ? `· Position: (${el.x}, ${el.y}) · Size: ${el.w}×${el.h}` : ''}
+            ${el.reverse ? '· <span style="color:var(--warn)">[REVERSED]</span>' : ''}
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn-secondary" onclick="testElementBlink('${el.id}')" title="Flash physical LEDs on house">⚡ Test</button>
+          <button class="btn-secondary" onclick="editElement('${el.id}')">✏️ Edit</button>
+          <button class="btn-danger" onclick="deleteElement('${el.id}')">🗑</button>
+        </div>
+      </div>
+    `;
+  });
+
+  container.innerHTML = html;
 }
 
-function showInfoBox(type, msg) {
-  const box = document.getElementById("info-box");
-  box.className = "info-box visible " + type;
-  box.innerHTML = `<span style="color:var(--error)">${msg}</span>`;
+// ── Window Modal Logic ────────────────────────────────────────────────────────
+function openAddWindowModal() {
+  const newId = "win_" + Date.now();
+  document.getElementById("modal-window-title").textContent = "Add Window to House";
+  document.getElementById("win-id").value = newId;
+  document.getElementById("win-name").value = "Window " + (fullConfig?.house?.elements?.filter(e => e.type === "window").length + 1 || 1);
+  document.getElementById("win-story").value = "2";
+  document.getElementById("win-start-led").value = "0";
+  document.getElementById("win-led-count").value = "40";
+  document.getElementById("win-end-led").value = "39";
+  document.getElementById("win-x").value = "250";
+  document.getElementById("win-y").value = "280";
+  document.getElementById("win-w").value = "90";
+  document.getElementById("win-h").value = "100";
+  document.getElementById("win-x-val").textContent = "250";
+  document.getElementById("win-y-val").textContent = "280";
+  document.getElementById("win-w-val").textContent = "90";
+  document.getElementById("win-h-val").textContent = "100";
+  document.getElementById("win-reverse").checked = false;
+
+  populateControllerDropdowns();
+  selectedElementId = newId;
+
+  // Add temporary window to elements so it's visible in preview immediately!
+  fullConfig.house.elements.push({
+    id: newId, name: document.getElementById("win-name").value,
+    type: "window", category: "house", story: 2,
+    instanceId: document.getElementById("win-controller").value,
+    segmentId: 0, startLed: 0, ledCount: 40, reverse: false,
+    x: 250, y: 280, w: 90, h: 100, startCorner: "bottom-left", direction: "clockwise"
+  });
+
+  renderAdminPreview();
+  document.getElementById("modal-window").classList.add("open");
 }
 
-// ── Save config ───────────────────────────────────────────────────────────────
-async function saveConfig() {
-  const ip = document.getElementById("wled-ip").value.trim();
-  const payload = {
-    cols:       parseInt(document.getElementById("grid-cols").value),
-    rows:       parseInt(document.getElementById("grid-rows").value),
-    serpentine: document.getElementById("serpentine").checked,
-    brightness: parseInt(document.getElementById("brightness").value),
-    isMatrix:   parseInt(document.getElementById("grid-rows").value) > 1,
+function editElement(elId) {
+  const el = fullConfig?.house?.elements?.find(e => e.id === elId);
+  if (!el) return;
+
+  selectedElementId = elId;
+  populateControllerDropdowns();
+  renderAdminPreview();
+
+  if (el.type === "window") {
+    document.getElementById("modal-window-title").textContent = "Edit Window";
+    document.getElementById("win-id").value = el.id;
+    document.getElementById("win-name").value = el.name;
+    document.getElementById("win-story").value = el.story || 2;
+    document.getElementById("win-controller").value = el.instanceId;
+    document.getElementById("win-start-led").value = el.startLed;
+    document.getElementById("win-led-count").value = el.ledCount;
+    document.getElementById("win-end-led").value = el.startLed + el.ledCount - 1;
+    document.getElementById("win-x").value = el.x;
+    document.getElementById("win-y").value = el.y;
+    document.getElementById("win-w").value = el.w;
+    document.getElementById("win-h").value = el.h;
+    document.getElementById("win-x-val").textContent = el.x;
+    document.getElementById("win-y-val").textContent = el.y;
+    document.getElementById("win-w-val").textContent = el.w;
+    document.getElementById("win-h-val").textContent = el.h;
+    document.getElementById("win-corner").value = el.startCorner || "bottom-left";
+    document.getElementById("win-direction").value = el.direction || "clockwise";
+    document.getElementById("win-reverse").checked = !!el.reverse;
+    document.getElementById("modal-window").classList.add("open");
+  } else {
+    document.getElementById("modal-line-title").textContent = "Edit Line / Strip";
+    document.getElementById("line-id").value = el.id;
+    document.getElementById("line-name").value = el.name;
+    document.getElementById("line-category").value = el.category || "house";
+    document.getElementById("line-controller").value = el.instanceId;
+    document.getElementById("line-start-led").value = el.startLed;
+    document.getElementById("line-led-count").value = el.ledCount;
+    document.getElementById("line-end-led").value = el.startLed + el.ledCount - 1;
+    document.getElementById("line-points").value = JSON.stringify(el.points || []);
+    document.getElementById("line-reverse").checked = !!el.reverse;
+    document.getElementById("modal-line").classList.add("open");
+  }
+}
+
+function saveWindowElement() {
+  const id = document.getElementById("win-id").value;
+  const name = document.getElementById("win-name").value || "Window";
+  const story = parseInt(document.getElementById("win-story").value) || 2;
+  const instanceId = document.getElementById("win-controller").value;
+  const startLed = parseInt(document.getElementById("win-start-led").value) || 0;
+  const ledCount = parseInt(document.getElementById("win-led-count").value) || 40;
+  const x = parseInt(document.getElementById("win-x").value) || 250;
+  const y = parseInt(document.getElementById("win-y").value) || 280;
+  const w = parseInt(document.getElementById("win-w").value) || 90;
+  const h = parseInt(document.getElementById("win-h").value) || 100;
+  const startCorner = document.getElementById("win-corner").value;
+  const direction = document.getElementById("win-direction").value;
+  const reverse = document.getElementById("win-reverse").checked;
+
+  const winObj = {
+    id, name, type: "window", category: "house",
+    story, instanceId, segmentId: 0,
+    startLed, ledCount, reverse,
+    x, y, w, h, startCorner, direction
   };
-  if (ip) payload.wledIp = ip;
+
+  const elements = fullConfig.house.elements;
+  const idx = elements.findIndex(e => e.id === id);
+  if (idx >= 0) elements[idx] = winObj;
+  else elements.push(winObj);
+
+  closeModal("modal-window");
+  renderElementsList();
+  renderAdminPreview();
+  toast("Window saved ✓");
+}
+
+// ── Line Modal Logic ──────────────────────────────────────────────────────────
+function openAddLineModal() {
+  document.getElementById("modal-line-title").textContent = "Add Line / Strip to House or Yard";
+  document.getElementById("line-id").value = "line_" + Date.now();
+  document.getElementById("line-name").value = "Main Roof Peak";
+  document.getElementById("line-category").value = "house";
+  document.getElementById("line-preset").value = "roof_peak";
+  document.getElementById("line-start-led").value = "0";
+  document.getElementById("line-led-count").value = "60";
+  document.getElementById("line-end-led").value = "59";
+  document.getElementById("line-points").value = JSON.stringify([{x:150,y:250},{x:500,y:80},{x:850,y:250}]);
+  document.getElementById("line-reverse").checked = false;
+  populateControllerDropdowns();
+  document.getElementById("modal-line").classList.add("open");
+}
+
+function applyLinePreset(type) {
+  let pts = [];
+  if (type === "roof_peak") {
+    pts = [{x:150, y:250}, {x:500, y:80}, {x:850, y:250}];
+    document.getElementById("line-category").value = "house";
+  } else if (type === "roof_fascia") {
+    pts = [{x:150, y:250}, {x:850, y:250}];
+    document.getElementById("line-category").value = "house";
+  } else if (type === "pillar") {
+    pts = [{x:460, y:470}, {x:460, y:565}];
+    document.getElementById("line-category").value = "house";
+  } else if (type === "walkway") {
+    pts = [{x:465, y:570}, {x:480, y:630}, {x:450, y:700}];
+    document.getElementById("line-category").value = "yard";
+  } else if (type === "tree") {
+    pts = [{x:70, y:530}, {x:100, y:490}, {x:70, y:460}];
+    document.getElementById("line-category").value = "yard";
+  }
+  if (pts.length) document.getElementById("line-points").value = JSON.stringify(pts);
+}
+
+function saveLineElement() {
+  const id = document.getElementById("line-id").value;
+  const name = document.getElementById("line-name").value || "Line";
+  const category = document.getElementById("line-category").value;
+  const instanceId = document.getElementById("line-controller").value;
+  const startLed = parseInt(document.getElementById("line-start-led").value) || 0;
+  const ledCount = parseInt(document.getElementById("line-led-count").value) || 60;
+  const reverse = document.getElementById("line-reverse").checked;
+
+  let points = [];
+  try {
+    points = JSON.parse(document.getElementById("line-points").value);
+  } catch {
+    alert("Points must be valid JSON: [{'x':10,'y':20}, ...]");
+    return;
+  }
+
+  const lineObj = {
+    id, name, type: "line", category,
+    instanceId, segmentId: 0,
+    startLed, ledCount, reverse, points
+  };
+
+  const elements = fullConfig.house.elements;
+  const idx = elements.findIndex(e => e.id === id);
+  if (idx >= 0) elements[idx] = lineObj;
+  else elements.push(lineObj);
+
+  closeModal("modal-line");
+  renderElementsList();
+  renderAdminPreview();
+  toast("Line saved ✓");
+}
+
+function deleteElement(id) {
+  if (!confirm("Delete this light element?")) return;
+  fullConfig.house.elements = fullConfig.house.elements.filter(e => e.id !== id);
+  renderElementsList();
+  renderAdminPreview();
+  toast("Element deleted ✓");
+}
+
+// ── Physical String Test / Blink ──────────────────────────────────────────────
+async function testElementBlink(elementId) {
+  toast("Testing physical string on house…");
+  try {
+    const res = await fetch("/api/admin/test-element", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ elementId, color: [255, 255, 255], durationMs: 2500 })
+    });
+    const data = await res.json();
+    if (data.ok) toast("Physical lights flashed ✓");
+    else toast("Test failed: " + data.error, "error");
+  } catch (e) {
+    toast("Test error: " + e.message, "error");
+  }
+}
+
+async function testWindowPhysically() {
+  const instanceId = document.getElementById("win-controller").value;
+  const startLed = parseInt(document.getElementById("win-start-led").value) || 0;
+  const ledCount = parseInt(document.getElementById("win-led-count").value) || 20;
 
   try {
-    const res  = await fetch("/api/config", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+    await fetch("/api/admin/test-element", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ instanceId, startLed, ledCount, color: [255, 255, 255] })
+    });
+    toast("Blinking window LEDs…");
+  } catch (e) {
+    toast(e.message, "error");
+  }
+}
+
+async function testLinePhysically() {
+  const instanceId = document.getElementById("line-controller").value;
+  const startLed = parseInt(document.getElementById("line-start-led").value) || 0;
+  const ledCount = parseInt(document.getElementById("line-led-count").value) || 20;
+
+  try {
+    await fetch("/api/admin/test-element", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ instanceId, startLed, ledCount, color: [255, 255, 255] })
+    });
+    toast("Blinking line LEDs…");
+  } catch (e) {
+    toast(e.message, "error");
+  }
+}
+
+// ── Controller Management ─────────────────────────────────────────────────────
+function generateRandomCtrlPin() {
+  const pin = String(Math.floor(1000 + Math.random() * 9000));
+  document.getElementById("ctrl-pin").value = pin;
+  toast("Generated PIN: " + pin);
+}
+
+function toggleCtrlMatrixFields() {
+  const isMatrix = document.getElementById("ctrl-is-matrix").checked;
+  const fields = document.getElementById("ctrl-matrix-fields");
+  const badge = document.getElementById("ctrl-matrix-badge");
+  if (isMatrix) {
+    fields.style.display = "block";
+    badge.textContent = "Grid layout active";
+    badge.style.color = "var(--success)";
+    calcCtrlMatrixLeds();
+  } else {
+    fields.style.display = "none";
+    badge.textContent = "Linear strip";
+    badge.style.color = "var(--muted)";
+  }
+}
+
+function calcCtrlMatrixLeds() {
+  const isMatrix = document.getElementById("ctrl-is-matrix").checked;
+  if (!isMatrix) return;
+  const cols = parseInt(document.getElementById("ctrl-cols").value, 10) || 16;
+  const rows = parseInt(document.getElementById("ctrl-rows").value, 10) || 16;
+  document.getElementById("ctrl-leds").value = cols * rows;
+}
+
+function copyPinToClipboard(pin, matrixName) {
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(pin).then(() => {
+      toast(`Copied PIN ${pin} (${matrixName}) to clipboard ✓`);
+    }).catch(() => {
+      prompt(`PIN for ${matrixName}:`, pin);
+    });
+  } else {
+    prompt(`PIN for ${matrixName}:`, pin);
+  }
+}
+
+function renderControllersList() {
+  const container = document.getElementById("controllers-list");
+  if (!container || !fullConfig?.instances) return;
+
+  const instances = fullConfig.instances;
+  if (instances.length === 0) {
+    container.innerHTML = `<p style="color:var(--muted); font-size:0.85rem">No controllers added yet. Click 'Add Controller' or run auto-discovery.</p>`;
+    return;
+  }
+
+  // Summary Cheat Sheet for quick sharing of Matrix PINs
+  let html = `
+    <div style="background:rgba(123,97,255,0.08); border:1px solid rgba(123,97,255,0.3); border-radius:10px; padding:14px; margin-bottom:18px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <span style="font-weight:700; color:var(--accent); font-size:0.9rem; display:flex; align-items:center; gap:6px;">
+          <span>📱</span> Guest Matrix Access PINs
+        </span>
+        <span style="font-size:0.75rem; color:var(--muted);">Share with mobile users</span>
+      </div>
+      <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap:10px;">
+  `;
+
+  instances.forEach(inst => {
+    const pin = inst.pin || "—";
+    html += `
+      <div style="background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:10px 12px; display:flex; align-items:center; justify-content:space-between;">
+        <div>
+          <div style="font-weight:600; font-size:0.85rem; color:var(--text);">${escapeHtml(inst.name)}</div>
+          <div style="font-size:0.72rem; color:var(--muted);">${inst.isMatrix ? `Matrix (${inst.cols}×${inst.rows})` : 'Linear Strip'}</div>
+        </div>
+        <div style="display:flex; align-items:center; gap:6px;">
+          <span style="background:rgba(123,97,255,0.2); border:1px solid var(--accent); color:#fff; font-family:'JetBrains Mono',monospace; font-weight:700; font-size:0.95rem; padding:3px 8px; border-radius:6px; letter-spacing:0.08em;">
+            ${pin}
+          </span>
+          <button class="btn-secondary" style="padding:4px 8px; font-size:0.72rem;" title="Copy PIN" onclick="copyPinToClipboard('${pin}', '${escapeHtml(inst.name)}')">📋</button>
+        </div>
+      </div>
+    `;
+  });
+
+  html += `
+      </div>
+    </div>
+  `;
+
+  // Detailed Controller Cards
+  instances.forEach(inst => {
+    const pin = inst.pin || "—";
+    html += `
+      <div class="device-card" style="border-left: 3px solid ${inst.isMatrix ? 'var(--accent)' : 'var(--muted)'};">
+        <div class="device-top">
+          <div>
+            <b>${escapeHtml(inst.name)}</b>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:0.75rem; color:var(--muted); margin-left:8px">${inst.ip || 'no IP'}</span>
+            <span style="margin-left:10px; background:rgba(123,97,255,0.18); border:1px solid var(--accent); color:#fff; font-family:'JetBrains Mono',monospace; font-weight:700; font-size:0.75rem; padding:2px 8px; border-radius:6px;">
+              🔑 PIN: ${pin}
+            </span>
+          </div>
+          <div class="btn-row">
+            <button class="btn-secondary" onclick="viewControllerPresets('${inst.id}', '${inst.ip}', '${escapeHtml(inst.name)}')">✨ Presets</button>
+            <button class="btn-secondary" onclick="adminReleaseLive('${inst.id}')" title="Release UDP live override">🎮 Release Live</button>
+            <button class="btn-secondary" onclick="pingController('${inst.ip}')">⚡ Ping</button>
+            <button class="btn-secondary" onclick="editController('${inst.id}')">✏️ Edit</button>
+            <button class="btn-danger" onclick="deleteController('${inst.id}')">🗑</button>
+          </div>
+        </div>
+        <div class="device-meta">
+          LED Count: <b style="color:var(--accent)">${inst.ledCount}</b> · Port: ${inst.udpPort || 21329} · ${inst.isMatrix ? `Matrix (${inst.cols}×${inst.rows}${inst.serpentine ? ', Serpentine' : ''})` : 'Linear Strip'}
+        </div>
+      </div>
+    `;
+  });
+  container.innerHTML = html;
+}
+
+function openAddControllerModal() {
+  document.getElementById("ctrl-modal-title").textContent = "Add WLED Controller";
+  document.getElementById("ctrl-id").value = "inst_" + Date.now();
+  document.getElementById("ctrl-name").value = "Matrix " + ((fullConfig?.instances?.length || 0) + 1);
+  document.getElementById("ctrl-ip").value = "";
+  document.getElementById("ctrl-port").value = "21329";
+  document.getElementById("ctrl-pin").value = String(1000 + (fullConfig?.instances?.length || 0) + 1);
+  document.getElementById("ctrl-is-matrix").checked = true;
+  document.getElementById("ctrl-cols").value = "16";
+  document.getElementById("ctrl-rows").value = "16";
+  document.getElementById("ctrl-serpentine").checked = false;
+  document.getElementById("ctrl-leds").value = "256";
+  toggleCtrlMatrixFields();
+  document.getElementById("modal-controller").classList.add("open");
+}
+
+function editController(id) {
+  const inst = fullConfig?.instances?.find(i => i.id === id);
+  if (!inst) return;
+  document.getElementById("ctrl-modal-title").textContent = "Edit WLED Controller";
+  document.getElementById("ctrl-id").value = inst.id;
+  document.getElementById("ctrl-name").value = inst.name;
+  document.getElementById("ctrl-ip").value = inst.ip;
+  document.getElementById("ctrl-port").value = inst.udpPort || 21329;
+  document.getElementById("ctrl-pin").value = inst.pin || String(1000 + (fullConfig?.instances?.indexOf(inst) || 0) + 1);
+  document.getElementById("ctrl-is-matrix").checked = !!inst.isMatrix;
+  document.getElementById("ctrl-cols").value = inst.cols || 16;
+  document.getElementById("ctrl-rows").value = inst.rows || 16;
+  document.getElementById("ctrl-serpentine").checked = !!inst.serpentine;
+  document.getElementById("ctrl-leds").value = inst.ledCount || 256;
+  toggleCtrlMatrixFields();
+  document.getElementById("modal-controller").classList.add("open");
+}
+
+async function pingAndDetectController() {
+  const ip = document.getElementById("ctrl-ip").value.trim();
+  if (!ip) { alert("Enter IP address first"); return; }
+
+  toast("Connecting to WLED at " + ip + "…");
+  try {
+    const res = await fetch(`/api/ping?ip=${ip}`);
+    const data = await res.json();
+    if (data.ok && data.detected) {
+      document.getElementById("ctrl-name").value = data.detected.name || document.getElementById("ctrl-name").value;
+      document.getElementById("ctrl-port").value = data.detected.udpPort || 21329;
+
+      if (data.detected.isMatrix) {
+        document.getElementById("ctrl-is-matrix").checked = true;
+        document.getElementById("ctrl-cols").value = data.detected.cols || 16;
+        document.getElementById("ctrl-rows").value = data.detected.rows || 16;
+        document.getElementById("ctrl-leds").value = data.detected.ledCount;
+        toggleCtrlMatrixFields();
+        toast(`Detected Matrix: ${data.detected.cols}×${data.detected.rows} (${data.detected.ledCount} LEDs) ✓`);
+      } else {
+        document.getElementById("ctrl-leds").value = data.detected.ledCount;
+        toast(`Detected: ${data.detected.ledCount} LEDs ✓`);
+      }
+    } else {
+      toast("Could not connect: " + (data.error || 'unknown error'), "error");
+    }
+  } catch (e) {
+    toast(e.message, "error");
+  }
+}
+
+async function pingController(ip) {
+  if (!ip) return;
+  toast("Pinging " + ip + "…");
+  try {
+    const res = await fetch(`/api/ping?ip=${ip}`);
+    const data = await res.json();
+    if (data.ok) {
+      const isM = data.detected?.isMatrix;
+      alert(`WLED Online!\nName: ${data.info.name}\nType: ${isM ? `Matrix (${data.detected.cols}×${data.detected.rows})` : 'Linear Strip'}\nLED Count: ${data.info.leds.count}\nVersion: ${data.info.ver}`);
+    } else {
+      alert("Error reaching controller: " + data.error);
+    }
+  } catch (e) {
+    alert("Ping error: " + e.message);
+  }
+}
+
+async function saveController() {
+  const id = document.getElementById("ctrl-id").value;
+  const name = document.getElementById("ctrl-name").value.trim() || "WLED Matrix";
+  const ip = document.getElementById("ctrl-ip").value.trim();
+  const udpPort = parseInt(document.getElementById("ctrl-port").value, 10) || 21329;
+  const pin = document.getElementById("ctrl-pin").value.trim() || "1001";
+  const isMatrix = document.getElementById("ctrl-is-matrix").checked;
+  const cols = parseInt(document.getElementById("ctrl-cols").value, 10) || (isMatrix ? 16 : 16);
+  const rows = parseInt(document.getElementById("ctrl-rows").value, 10) || (isMatrix ? 16 : 1);
+  const serpentine = document.getElementById("ctrl-serpentine").checked;
+  const ledCount = parseInt(document.getElementById("ctrl-leds").value, 10) || (cols * rows) || 256;
+
+  if (!ip) { alert("IP address is required"); return; }
+
+  const instObj = {
+    id,
+    name,
+    ip,
+    udpPort,
+    pin,
+    isMatrix,
+    cols,
+    rows,
+    serpentine,
+    ledCount
+  };
+
+  const list = fullConfig.instances;
+  const idx = list.findIndex(i => i.id === id);
+  if (idx >= 0) list[idx] = { ...list[idx], ...instObj };
+  else list.push(instObj);
+
+  closeModal("modal-controller");
+  renderControllersList();
+  populateControllerDropdowns();
+
+  // Persist directly to server
+  try {
+    await fetch("/api/admin/config", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(fullConfig)
+    });
+    toast(`Saved ${name} with PIN ${pin} ✓`);
+  } catch (e) {
+    toast("Controller saved locally (click Save All Configurations to push)", "warn");
+  }
+}
+
+function deleteController(id) {
+  if (!confirm("Remove this WLED controller?")) return;
+  fullConfig.instances = fullConfig.instances.filter(i => i.id !== id);
+  renderControllersList();
+  populateControllerDropdowns();
+  saveAllConfig();
+  toast("Controller removed ✓");
+}
+
+// ── Auto-Discovery ────────────────────────────────────────────────────────────
+function startDiscovery() {
+  const grid = document.getElementById("discovered-grid");
+  const status = document.getElementById("scan-status");
+  grid.innerHTML = "";
+  status.style.display = "flex";
+
+  const es = new EventSource("/api/discover");
+  es.addEventListener("scanning", e => {
+    const d = JSON.parse(e.data);
+    document.getElementById("scan-label").textContent = `Scanning ${d.total} IPs across ${d.subnets.join(', ')}…`;
+  });
+
+  es.addEventListener("device", e => {
+    const dev = JSON.parse(e.data);
+    const card = document.createElement("div");
+    card.className = "device-card";
+    const typeLabel = dev.isMatrix ? `Matrix (${dev.cols}×${dev.rows})` : 'Linear Strip';
+    card.innerHTML = `
+      <b>${escapeHtml(dev.name)}</b>
+      <span style="font-family:'JetBrains Mono',monospace; font-size:0.75rem; color:var(--muted)">${dev.ip}</span>
+      <span style="font-size:0.75rem; color:var(--accent); font-weight:600;">${typeLabel} · ${dev.ledCount} LEDs</span>
+      <button class="btn-primary" onclick="addDiscoveredController('${dev.ip}', '${escapeHtml(dev.name)}', ${dev.ledCount}, ${dev.udpPort || 21329}, ${!!dev.isMatrix}, ${dev.cols || 16}, ${dev.rows || 16})">＋ Add Controller</button>
+    `;
+    grid.appendChild(card);
+  });
+
+  es.addEventListener("done", () => {
+    status.style.display = "none";
+    es.close();
+    toast("Discovery complete ✓");
+  });
+
+  es.onerror = () => {
+    status.style.display = "none";
+    es.close();
+  };
+}
+
+function addDiscoveredController(ip, name, ledCount, udpPort, isMatrix = false, cols = 16, rows = 16) {
+  const existing = fullConfig.instances.find(i => i.ip === ip);
+  if (existing) {
+    editController(existing.id);
+    toast("Controller already exists — opened for editing", "warn");
+    return;
+  }
+
+  openAddControllerModal();
+  document.getElementById("ctrl-ip").value = ip;
+  document.getElementById("ctrl-name").value = name || ip;
+  document.getElementById("ctrl-port").value = udpPort || 21329;
+  document.getElementById("ctrl-leds").value = ledCount || 256;
+  document.getElementById("ctrl-is-matrix").checked = !!isMatrix;
+  document.getElementById("ctrl-cols").value = cols || 16;
+  document.getElementById("ctrl-rows").value = rows || (isMatrix ? 16 : 1);
+  toggleCtrlMatrixFields();
+  toast("Loaded discovered controller into form. Set your PIN and click Save.");
+}
+
+// Subnet tag management
+function renderSubnetChips() {
+  const wrap = document.getElementById("chip-wrap");
+  const input = document.getElementById("subnet-input");
+  wrap.querySelectorAll(".chip").forEach(c => c.remove());
+
+  (fullConfig?.scanSubnets || []).forEach(sub => {
+    const chip = document.createElement("div");
+    chip.className = "chip";
+    chip.innerHTML = `<span>${sub}</span><button class="chip-x" onclick="removeSubnet('${sub}')">×</button>`;
+    wrap.insertBefore(chip, input);
+  });
+}
+
+function onSubnetKeydown(e) {
+  if (e.key === "Enter" || e.key === ",") {
+    e.preventDefault();
+    const val = e.target.value.trim().replace(",", "");
+    if (val && !fullConfig.scanSubnets.includes(val)) {
+      fullConfig.scanSubnets.push(val);
+      renderSubnetChips();
+      e.target.value = "";
+    }
+  }
+}
+
+function removeSubnet(sub) {
+  fullConfig.scanSubnets = fullConfig.scanSubnets.filter(s => s !== sub);
+  renderSubnetChips();
+}
+
+// ── Default View Settings ─────────────────────────────────────────────────────
+function setDefaultMode(mode) {
+  if (!fullConfig) return;
+  fullConfig.defaultMode = mode;
+  updateModeButtons();
+  toast("Default view set to " + mode + " ✓");
+}
+
+function updateModeButtons() {
+  const mode = fullConfig?.defaultMode || "house";
+  document.getElementById("btn-def-house").style.borderColor   = mode === "house" ? "var(--accent)" : "var(--border)";
+  document.getElementById("btn-def-desktop").style.borderColor = (mode === "desktop" || mode === "matrix") ? "var(--accent)" : "var(--border)";
+  document.getElementById("btn-def-tablet").style.borderColor  = mode === "tablet" ? "var(--accent)" : "var(--border)";
+  document.getElementById("btn-def-strip").style.borderColor   = mode === "strip" ? "var(--accent)" : "var(--border)";
+}
+
+// ── Save All Config ───────────────────────────────────────────────────────────
+async function saveAllConfig() {
+  if (!fullConfig) return;
+
+  fullConfig.house.stories          = currentStories;
+  fullConfig.house.wallColor        = document.getElementById("house-wall-color").value;
+  fullConfig.house.trimColor        = document.getElementById("house-trim-color").value;
+  fullConfig.house.roofColor        = document.getElementById("house-roof-color").value;
+  fullConfig.brightness             = parseInt(document.getElementById("setting-bri").value) || 128;
+  fullConfig.brushRadius            = parseInt(document.getElementById("setting-brush-radius").value) || 10;
+  fullConfig.singlePixelTap         = document.getElementById("setting-single-pixel-tap").checked;
+  fullConfig.releaseLiveOnClear     = document.getElementById("setting-release-live").checked;
+  fullConfig.allowViewSwitching     = document.getElementById("setting-view-switching").checked;
+  fullConfig.slideshowEnabled       = document.getElementById("setting-slideshow-enabled").checked;
+  fullConfig.slideshowIdleMinutes   = parseInt(document.getElementById("setting-slideshow-idle").value) || 3;
+  fullConfig.slideshowIntervalSecs  = parseInt(document.getElementById("setting-slideshow-interval").value) || 45;
+  fullConfig.keepaliveSecs          = parseInt(document.getElementById("setting-keepalive").value) || 0;
+  fullConfig.udpPort                = parseInt(document.getElementById("setting-udp-port").value) || 21329;
+
+  try {
+    const res = await fetch("/api/admin/config", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(fullConfig)
     });
     const data = await res.json();
     if (data.ok) {
-      const pill = document.getElementById("saved-pill");
-      pill.classList.add("show");
-      setTimeout(() => pill.classList.remove("show"), 2000);
-      toast("Config saved ✓", "ok");
+      fullConfig = data.config;
+      toast("All configurations saved successfully ✓");
     } else {
-      toast(data.error, "error");
+      toast("Save failed: " + data.error, "error");
     }
-  } catch (e) {
-    toast("Could not save: " + e.message, "error");
+  } catch (err) {
+    toast("Network error: " + err.message, "error");
   }
 }
 
-// ── Clear strip ───────────────────────────────────────────────────────────────
-async function clearWled() {
+// ── Admin Presets & Live Release Helpers ──────────────────────────────────────
+async function viewControllerPresets(instanceId, ip, name) {
+  document.getElementById("modal-presets-title").textContent = `✨ Presets: ${name}`;
+  const releaseBtn = document.getElementById("modal-presets-release-btn");
+  releaseBtn.onclick = () => adminReleaseLive(instanceId);
+
+  const list = document.getElementById("admin-presets-list");
+  list.innerHTML = `<div style="text-align:center; padding:20px; color:var(--muted);">Loading presets from ${ip}…</div>`;
+  document.getElementById("modal-presets").classList.add("open");
+
   try {
-    const res  = await fetch("/api/clear", { method:"POST", headers:{"Content-Type":"application/json"}, body:"{}" });
+    const res = await fetch(`/api/presets?instanceId=${encodeURIComponent(instanceId)}`);
     const data = await res.json();
-    if (data.ok) toast("Strip cleared ✓", "ok");
-    else         toast(data.error, "error");
-  } catch (e) {
-    toast("Backend unreachable: " + e.message, "error");
-  }
-}
+    const instData = data.instances?.[0];
 
-// ── Subnet chip input ─────────────────────────────────────────────────────────
-let subnets = [];   // array of "192.168.1" style prefixes
-
-function renderChips() {
-  const wrap  = document.getElementById("chip-wrap");
-  const input = document.getElementById("subnet-input");
-  // Remove existing chips (keep the input element)
-  [...wrap.querySelectorAll(".chip")].forEach(c => c.remove());
-  subnets.forEach(prefix => {
-    const chip = document.createElement("span");
-    chip.className = "chip";
-    chip.innerHTML = `${prefix}.x <button class="chip-x" onclick="removeSubnet('${prefix}')" title="Remove">&times;</button>`;
-    wrap.insertBefore(chip, input);
-  });
-  updateScanHint();
-}
-
-function addSubnet(raw) {
-  const prefix = raw.trim().replace(/\.x?$/, "");   // strip trailing ".x" or "."
-  // Must be three dot-separated octets, each 0-255
-  const parts = prefix.split(".");
-  if (parts.length !== 3 || parts.some(p => isNaN(p) || +p < 0 || +p > 255)) {
-    toast(`"${prefix}" is not a valid subnet prefix (e.g. 192.168.2)`, "error");
-    return false;
-  }
-  if (subnets.includes(prefix)) return false;
-  subnets.push(prefix);
-  renderChips();
-  saveSubnets();
-  return true;
-}
-
-function removeSubnet(prefix) {
-  subnets = subnets.filter(s => s !== prefix);
-  renderChips();
-  saveSubnets();
-}
-
-function subnetKeydown(e) {
-  const input = e.target;
-  if (e.key === "Enter" || e.key === "," || e.key === "Tab") {
-    if (input.value.trim()) {
-      if (addSubnet(input.value)) input.value = "";
-      e.preventDefault();
+    if (!instData || instData.error) {
+      list.innerHTML = `<div style="color:var(--warn); padding:12px;">⚠ ${instData?.error || 'Device unreachable'}</div>`;
+      return;
     }
-  } else if (e.key === "Backspace" && input.value === "" && subnets.length) {
-    removeSubnet(subnets[subnets.length - 1]);
+
+    if (!instData.presets?.length) {
+      list.innerHTML = `<div style="color:var(--muted); padding:12px;">No saved presets found on ${ip}.</div>`;
+      return;
+    }
+
+    let html = `<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap:6px;">`;
+    instData.presets.forEach(p => {
+      html += `
+        <button class="btn-secondary" onclick="adminApplyPreset('${instanceId}', ${p.id}, '${escapeHtml(p.name)}')" style="padding:10px 8px; text-align:left; display:flex; flex-direction:column; gap:2px;">
+          <div style="font-size:0.68rem; color:var(--muted); font-family:'JetBrains Mono',monospace">#${p.id}</div>
+          <div style="font-size:0.8rem; font-weight:600; color:#fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">${escapeHtml(p.name)}</div>
+        </button>
+      `;
+    });
+    html += `</div>`;
+    list.innerHTML = html;
+  } catch (err) {
+    list.innerHTML = `<div style="color:var(--warn); padding:12px;">Error: ${err.message}</div>`;
   }
 }
 
-function updateScanHint() {
-  const count = subnets.length * 254;
-  const el    = document.getElementById("scan-hint");
-  el.textContent = subnets.length
-    ? `Will probe ${count} IP${count !== 1 ? "s" : ""} across ${subnets.length} subnet${subnets.length !== 1 ? "s" : ""}`
-    : "Add at least one subnet to scan";
-}
-
-async function saveSubnets() {
+async function adminApplyPreset(instanceId, presetId, name) {
   try {
-    await fetch("/api/config", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ scanSubnets: subnets }),
+    const res = await fetch("/api/presets/apply", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ instanceId, presetId })
     });
-  } catch {}
+    const data = await res.json();
+    if (data.ok) toast(`Applied preset "${name || presetId}" ✓ (Live released)`);
+    else toast("Failed: " + data.error, "error");
+  } catch (e) {
+    toast("Error: " + e.message, "error");
+  }
 }
 
-// ── Device discovery ──────────────────────────────────────────────────────────
-let discoverSource = null;
-
-function startDiscovery() {
-  if (discoverSource) { discoverSource.close(); discoverSource = null; }
-
-  const grid   = document.getElementById("device-grid");
-  const status = document.getElementById("scan-status");
-  const label  = document.getElementById("scan-label");
-
-  grid.innerHTML   = "";
-  status.className = "scan-status visible";
-  label.textContent = "Starting…";
-
-  discoverSource = new EventSource("/api/discover");
-
-  discoverSource.addEventListener("scanning", e => {
-    const { total, subnets: s } = JSON.parse(e.data);
-    label.textContent = `Scanning ${total} IPs across ${s.join(", ")}…`;
-  });
-
-  discoverSource.addEventListener("device", e => {
-    const d = JSON.parse(e.data);
-    grid.appendChild(makeDeviceCard(d));
-    label.textContent = `Found ${grid.children.length} device${grid.children.length !== 1 ? "s" : ""}…`;
-  });
-
-  discoverSource.addEventListener("done", e => {
-    const { count } = JSON.parse(e.data);
-    status.className  = "scan-status";
-    label.textContent = "";
-    if (count === 0) grid.innerHTML = `<p style="color:var(--muted);font-size:0.82rem">No WLED devices found. Check that the subnets are correct and WLED is reachable.</p>`;
-    discoverSource.close();
-    discoverSource = null;
-  });
-
-  discoverSource.onerror = () => {
-    status.className  = "scan-status";
-    label.textContent = "";
-    discoverSource?.close();
-    discoverSource = null;
-  };
+async function adminReleaseLive(instanceId) {
+  try {
+    const res = await fetch("/api/live/release", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ instanceId })
+    });
+    const data = await res.json();
+    if (data.ok) toast("🎮 Live UDP released. Regular WLED controls restored ✓");
+    else toast("Release failed: " + data.error, "error");
+  } catch (e) {
+    toast("Error: " + e.message, "error");
+  }
 }
 
-function makeDeviceCard(d) {
-  const isMatrix = d.isMatrix;
-  const dims = isMatrix ? `${d.cols} &times; ${d.rows}` : `${d.ledCount} LEDs`;
-  const card = document.createElement("div");
-  card.className = "device-card";
-  card.innerHTML = `
-    <div class="device-name" title="${d.name}">${d.name}</div>
-    <div class="device-ip">${d.ip}</div>
-    <div><span class="device-badge ${isMatrix ? "badge-matrix" : "badge-strip"}">${isMatrix ? "2D Matrix" : "1D Strip"}</span></div>
-    <div class="device-dims">${dims}</div>
-    ${d.ver ? `<div class="device-ver">WLED ${d.ver}</div>` : ""}
-    <button class="btn-primary" onclick="connectDevice('${d.ip}')">Connect</button>
-  `;
-  return card;
+function escapeHtml(str) {
+  return String(str || "").replace(/[&<>"']/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[m]));
 }
 
-async function connectDevice(ip) {
-  document.getElementById("wled-ip").value = ip;
-  window.scrollTo({ top: 0, behavior: "smooth" });
-  await pingAndDetect();
+async function clearAllLights() {
+  if (!confirm("Are you sure you want to blank all strips and return WLED to normal mode?")) return;
+  try {
+    const res = await fetch("/api/clear", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ releaseLive: true }) });
+    const data = await res.json();
+    if (data.ok) toast("All lights cleared & WLED controls restored ✓");
+    else toast("Clear failed: " + data.error, "error");
+  } catch (e) {
+    toast(e.message, "error");
+  }
 }
 
-// ── Toast ─────────────────────────────────────────────────────────────────────
-let toastTimer;
-function toast(msg, type="ok") {
-  const el = document.getElementById("toast");
-  el.textContent = msg; el.className = "show " + type;
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { el.className = ""; }, 3000);
+function toast(msg, type = "ok") {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.className = "show " + type;
+  setTimeout(() => t.className = "", 2500);
 }
+
+// ── Bootstrap Admin ───────────────────────────────────────────────────────────
+async function initAdmin() {
+  try {
+    const res = await fetch("/api/admin/config");
+    const data = await res.json();
+    if (data.ok && data.config) {
+      fullConfig = data.config;
+      currentStories = fullConfig.house?.stories || 2;
+      setStories(currentStories);
+
+      document.getElementById("house-wall-color").value = fullConfig.house?.wallColor || "#1d2333";
+      document.getElementById("house-trim-color").value = fullConfig.house?.trimColor || "#475175";
+      document.getElementById("house-roof-color").value = fullConfig.house?.roofColor || "#121520";
+      document.getElementById("setting-bri").value       = fullConfig.brightness || 128;
+      document.getElementById("bri-val").textContent    = fullConfig.brightness || 128;
+
+      document.getElementById("setting-brush-radius").value = fullConfig.brushRadius || 10;
+      document.getElementById("brush-radius-val").textContent = (fullConfig.brushRadius || 10) + "px";
+      document.getElementById("setting-single-pixel-tap").checked = fullConfig.singlePixelTap !== false;
+      document.getElementById("setting-release-live").checked     = fullConfig.releaseLiveOnClear !== false;
+      document.getElementById("setting-view-switching").checked   = !!fullConfig.allowViewSwitching;
+
+      document.getElementById("setting-slideshow-enabled").checked   = !!fullConfig.slideshowEnabled;
+      document.getElementById("setting-slideshow-idle").value        = fullConfig.slideshowIdleMinutes || 3;
+      document.getElementById("setting-slideshow-interval").value    = fullConfig.slideshowIntervalSecs || 45;
+
+      document.getElementById("setting-keepalive").value = fullConfig.keepaliveSecs ?? 60;
+      document.getElementById("setting-udp-port").value  = fullConfig.udpPort || 21329;
+
+      renderElementsList();
+      renderControllersList();
+      populateControllerDropdowns();
+      renderSubnetChips();
+      updateModeButtons();
+      renderAdminPreview();
+    }
+  } catch (err) {
+    toast("Failed to load config: " + err.message, "error");
+  }
+}
+
+document.addEventListener("DOMContentLoaded", initAdmin);
 </script>
 </body>
 </html>

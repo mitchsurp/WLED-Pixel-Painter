@@ -18,7 +18,10 @@
       "Bash(echo \"desktop: $?\")",
       "Bash(chromium-browser --headless=new --no-sandbox --disable-gpu --window-size=390,844 --screenshot=/home/mitch/claude-wled-painter/claude-wled-painter/docs/screenshots/tablet.png http://localhost:3001/tablet)",
       "Bash(echo \"tablet: $?\")",
-      "Bash(chromium-browser --headless=new --no-sandbox --disable-gpu --window-size=1280,800 --screenshot=/home/mitch/claude-wled-painter/claude-wled-painter/docs/screenshots/admin.png http://localhost:3001/admin)"
+      "Bash(chromium-browser --headless=new --no-sandbox --disable-gpu --window-size=1280,800 --screenshot=/home/mitch/claude-wled-painter/claude-wled-painter/docs/screenshots/admin.png http://localhost:3001/admin)",
+      "Bash(gh repo *)",
+      "Bash(curl -s http://localhost:3001/api/config)",
+      "Bash(curl *)"
     ]
   }
 }

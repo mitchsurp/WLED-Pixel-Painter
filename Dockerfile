@@ -14,7 +14,7 @@ COPY --chown=node:node package.json server.js ./
 # HTML pages served as static files
 COPY --chown=node:node index.html  ./public/index.html
 COPY --chown=node:node admin.html  ./public/admin.html
-COPY --chown=node:node tablet.html ./public/tablet.html
+COPY --chown=node:node house.html  ./public/house.html
 
 # config.json will be written here at runtime; mount a volume to persist it
 RUN mkdir -p /data && chown node:node /data

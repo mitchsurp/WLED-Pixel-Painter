@@ -2,605 +2,2387 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>WLED Pixel Painter</title>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@300;400;600&display=swap" rel="stylesheet" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="theme-color" content="#07070d" />
+<title>WLED Matrix Painter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <style>
   :root {
-    --bg:      #0a0a0f;
-    --surface: #12121a;
-    --panel:   #1a1a26;
-    --border:  #2a2a3d;
-    --accent:  #7b61ff;
-    --glow:    #7b61ff66;
-    --text:    #e8e8f0;
-    --muted:   #6b6b8a;
-    --success: #4ecca3;
-    --error:   #ff6b6b;
-    --warn:    #ffd166;
+    --bg:          #07070d;
+    --surface:     #0f0f18;
+    --panel:       #161624;
+    --border:      #232338;
+    --border-glow: #7b61ff55;
+    --accent:      #7b61ff;
+    --accent-glow: rgba(123, 97, 255, 0.45);
+    --cyan:        #00f0ff;
+    --cyan-glow:   rgba(0, 240, 255, 0.4);
+    --text:        #f0f0f8;
+    --muted:       #717192;
+    --success:     #00e676;
+    --error:       #ff3b5c;
+    --warn:        #ffb300;
   }
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: 'Space Grotesk', sans-serif;
+
+  *, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html, body {
+    height: 100%;
+    height: 100dvh;
+    overflow: hidden;
     background: var(--bg);
     color: var(--text);
-    min-height: 100vh;
+    font-family: 'Space Grotesk', -apple-system, sans-serif;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  body {
     display: flex;
     flex-direction: column;
+    position: relative;
+    background: radial-gradient(circle at 50% -20%, #1a1538 0%, #07070d 70%);
+  }
+
+  /* ── Background Subtle Glow Gradients ────────────────────────── */
+  .bg-glow-orb {
+    position: absolute;
+    width: 380px; height: 380px;
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+    pointer-events: none;
+    filter: blur(60px);
+    opacity: 0.25;
+    z-index: 0;
+    top: -100px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  /* ── VIEW 1: PIN PROMPT GATE ─────────────────────────────────── */
+  #view-pin {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 10;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+  }
+
+  #view-pin.hidden {
+    opacity: 0;
+    pointer-events: none;
+    transform: scale(0.96);
+  }
+
+  .pin-card {
+    width: 100%;
+    max-width: 360px;
+    background: rgba(16, 16, 26, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 26px 20px 22px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7), 0 0 30px rgba(123, 97, 255, 0.15);
+  }
+
+  .pin-icon-wrap {
+    width: 64px; height: 64px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, rgba(123,97,255,0.25), rgba(0,240,255,0.25));
+    border: 1px solid rgba(123,97,255,0.4);
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 16px;
+    box-shadow: 0 0 24px var(--accent-glow);
+    position: relative;
+  }
+
+  .pin-mini-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 7px);
+    grid-gap: 3px;
+  }
+  .pin-mini-pixel {
+    width: 7px; height: 7px;
+    border-radius: 2px;
+    background: rgba(255,255,255,0.15);
+    animation: pixelBlink 2.4s infinite ease-in-out;
+  }
+  .pin-mini-pixel:nth-child(2)  { animation-delay: 0.2s; background: var(--accent); }
+  .pin-mini-pixel:nth-child(5)  { animation-delay: 0.4s; background: var(--cyan); }
+  .pin-mini-pixel:nth-child(8)  { animation-delay: 0.6s; background: #ff007f; }
+  .pin-mini-pixel:nth-child(11) { animation-delay: 0.8s; background: var(--success); }
+  .pin-mini-pixel:nth-child(15) { animation-delay: 1.0s; background: var(--warn); }
+
+  @keyframes pixelBlink {
+    0%, 100% { opacity: 0.4; transform: scale(0.9); }
+    50%      { opacity: 1; transform: scale(1.1); box-shadow: 0 0 6px currentColor; }
+  }
+
+  .pin-title {
+    font-size: 1.35rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: #fff;
+    margin-bottom: 4px;
+    text-align: center;
+  }
+
+  .pin-subtitle {
+    font-size: 0.82rem;
+    color: var(--muted);
+    text-align: center;
+    margin-bottom: 20px;
+    line-height: 1.35;
+  }
+
+  /* Masked Dots for PIN */
+  .pin-dots-row {
+    display: flex;
+    gap: 14px;
+    margin-bottom: 16px;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .pin-dot {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    background: rgba(255, 255, 255, 0.04);
+    transition: all 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .pin-dot.filled {
+    background: var(--accent);
+    border-color: var(--accent);
+    box-shadow: 0 0 14px var(--accent), 0 0 24px var(--accent-glow);
+    transform: scale(1.15);
+  }
+
+  .pin-error-msg {
+    min-height: 22px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--error);
+    text-align: center;
+    margin-bottom: 14px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+  .pin-error-msg.visible {
+    opacity: 1;
+    animation: shake 0.4s ease;
+  }
+
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-8px); }
+    40% { transform: translateX(8px); }
+    60% { transform: translateX(-5px); }
+    80% { transform: translateX(5px); }
+  }
+
+  /* Virtual Keypad */
+  .keypad-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-gap: 10px;
+    width: 100%;
+    margin-bottom: 14px;
+  }
+
+  .key-btn {
+    height: 54px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border);
+    color: #fff;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.35rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.12s ease;
+    user-select: none;
+  }
+
+  .key-btn:active {
+    background: var(--accent);
+    border-color: var(--accent);
+    transform: scale(0.93);
+    box-shadow: 0 0 16px var(--accent-glow);
+  }
+
+  .key-btn.action-key {
+    font-size: 0.95rem;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .key-btn.action-key:active {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.3);
+  }
+
+  .pin-connect-btn {
+    width: 100%;
+    height: 48px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, var(--accent), #9642ff);
+    color: #fff;
+    border: none;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.15s ease;
+    box-shadow: 0 4px 18px var(--accent-glow);
+  }
+  .pin-connect-btn:active {
+    transform: scale(0.97);
+  }
+  .pin-connect-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+
+  /* ── VIEW 2: PAINTER INTERFACE ─────────────────────────────────── */
+  #view-painter {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    z-index: 5;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+  }
+
+  #view-painter.active {
+    opacity: 1;
+    pointer-events: auto;
   }
 
   /* Header */
   header {
+    height: 52px;
+    padding: 0 14px;
+    background: rgba(15, 15, 24, 0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 14px 24px;
-    border-bottom: 1px solid var(--border);
-    background: var(--surface);
-    position: sticky; top: 0; z-index: 100;
+    flex-shrink: 0;
+    z-index: 20;
   }
-  .logo {
+
+  .header-matrix-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow: hidden;
+  }
+
+  .matrix-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--success);
+    box-shadow: 0 0 10px var(--success);
+    animation: pulseOnline 2.2s infinite ease-in-out;
+    flex-shrink: 0;
+  }
+  @keyframes pulseOnline {
+    0%, 100% { opacity: 0.7; transform: scale(0.95); }
+    50%      { opacity: 1; transform: scale(1.2); box-shadow: 0 0 14px var(--success); }
+  }
+
+  .matrix-name {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 0.92rem;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 150px;
+    letter-spacing: -0.01em;
+  }
+
+  .matrix-badge {
     font-family: 'JetBrains Mono', monospace;
-    font-weight: 700; font-size: 1.1rem; letter-spacing: 0.04em;
-    display: flex; align-items: center; gap: 10px;
-  }
-  .logo-dot {
-    width: 10px; height: 10px; border-radius: 50%;
-    background: var(--accent); box-shadow: 0 0 12px var(--accent);
-    animation: pulse 2s ease-in-out infinite;
-  }
-  @keyframes pulse {
-    0%,100% { box-shadow: 0 0 6px var(--accent); }
-    50%      { box-shadow: 0 0 18px var(--accent), 0 0 30px var(--glow); }
-  }
-  .status-bar {
-    display: flex; align-items: center; gap: 8px;
-    font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; color: var(--muted);
-  }
-  .status-dot {
-    width: 7px; height: 7px; border-radius: 50%;
-    background: var(--muted); transition: background 0.3s, box-shadow 0.3s;
-  }
-  .status-dot.ok   { background: var(--success); box-shadow: 0 0 8px var(--success); }
-  .status-dot.error{ background: var(--error);   box-shadow: 0 0 8px var(--error); }
-  .status-dot.busy { background: var(--warn);    box-shadow: 0 0 8px var(--warn); animation: pulse 0.8s infinite; }
-
-  /* Layout */
-  main { flex: 1; display: flex; overflow: hidden; }
-
-  /* Sidebar */
-  aside {
-    width: 220px; min-width: 220px;
-    background: var(--surface);
-    border-right: 1px solid var(--border);
-    display: flex; flex-direction: column;
-    overflow-y: auto;
-  }
-  .panel { padding: 16px; border-bottom: 1px solid var(--border); }
-  .panel-title {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.62rem; font-weight: 600;
-    text-transform: uppercase; letter-spacing: 0.12em;
-    color: var(--muted); margin-bottom: 10px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: var(--cyan);
+    background: rgba(0, 240, 255, 0.1);
+    border: 1px solid rgba(0, 240, 255, 0.3);
+    padding: 2px 6px;
+    border-radius: 6px;
+    white-space: nowrap;
   }
 
-  /* Buttons */
-  button {
-    font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 0.82rem;
-    border: none; border-radius: 6px; cursor: pointer; transition: all 0.15s; padding: 8px 14px;
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
   }
-  .btn-primary { background: var(--accent); color: #fff; width: 100%; }
-  .btn-primary:hover { background: #9580ff; box-shadow: 0 0 14px var(--glow); }
-  .btn-secondary { background: var(--panel); color: var(--text); border: 1px solid var(--border); width: 100%; }
-  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
-  .btn-danger { background: transparent; color: var(--error); border: 1px solid var(--error); width: 100%; margin-top: 6px; }
-  .btn-danger:hover { background: #ff6b6b22; }
-  .btn-row { display: flex; gap: 6px; }
-  .btn-row button { flex: 1; }
 
-  /* Tools */
-  .tools { display: flex; gap: 6px; }
-  .tool-btn {
-    flex: 1; padding: 8px 4px; font-size: 0.72rem;
-    background: var(--panel); color: var(--muted);
-    border: 1px solid var(--border); border-radius: 6px;
-    cursor: pointer; text-align: center; transition: all 0.15s;
-  }
-  .tool-btn:hover { color: var(--text); border-color: var(--muted); }
-  .tool-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); box-shadow: 0 0 10px var(--glow); }
-  .tool-icon { font-size: 1.1rem; display: block; margin-bottom: 2px; }
-
-  /* Color */
-  .color-preview {
-    width: 100%; height: 40px; border-radius: 6px;
-    border: 2px solid var(--border); margin-bottom: 8px;
-    cursor: pointer; transition: border-color 0.2s; position: relative; overflow: hidden;
-  }
-  .color-preview:hover { border-color: var(--accent); }
-  input[type="color"] { position: absolute; opacity: 0; width: 100%; height: 100%; cursor: pointer; top:0; left:0; }
-  .swatches { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; }
-  .swatch {
-    width: 100%; aspect-ratio: 1; border-radius: 4px; cursor: pointer;
-    border: 2px solid transparent; transition: transform 0.1s, border-color 0.1s;
-  }
-  .swatch:hover  { transform: scale(1.15); }
-  .swatch.active { border-color: #fff; }
-  .swatch.eraser { background: var(--panel); border: 2px dashed var(--border); }
-
-  /* Brightness */
-  label { font-size: 0.76rem; color: var(--muted); display: block; margin-bottom: 4px; }
-  input[type="range"] {
-    -webkit-appearance: none; width: 100%; height: 4px;
-    background: var(--border); border-radius: 2px; outline: none; margin: 6px 0;
-  }
-  input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none; width: 14px; height: 14px;
-    border-radius: 50%; background: var(--accent); cursor: pointer; box-shadow: 0 0 8px var(--glow);
-  }
-  .val-label { font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; color: var(--accent); float: right; }
-
-  /* Canvas */
-  .canvas-area {
-    flex: 1; display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    padding: 32px; background: var(--bg); overflow: auto;
-  }
-  .grid-wrap { position: relative; user-select: none; }
-  #pixel-grid {
-    display: grid;
+  .hdr-btn {
+    height: 34px;
+    padding: 0 10px;
+    border-radius: 9px;
+    background: var(--panel);
     border: 1px solid var(--border);
-    box-shadow: 0 0 40px #7b61ff22, 0 0 80px #7b61ff0a;
-    border-radius: 3px; overflow: hidden; cursor: crosshair;
+    color: var(--text);
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+    transition: all 0.15s ease;
   }
-  .pixel { background: #000; }
-  .pixel:hover { opacity: 0.85; }
-  .grid-overlay { position: absolute; top:0; left:0; pointer-events: none; opacity: 0.12; }
-
-  /* Strip mode label */
-  .mode-badge {
-    display: inline-flex; align-items: center; gap: 6px;
-    font-family: 'JetBrains Mono', monospace; font-size: 0.65rem;
-    padding: 3px 8px; border-radius: 12px;
-    border: 1px solid var(--border); color: var(--muted);
-    margin-bottom: 10px;
+  .hdr-btn:active {
+    background: rgba(255, 255, 255, 0.12);
+    transform: scale(0.95);
   }
-  .mode-badge.matrix { border-color: var(--accent); color: var(--accent); }
-
-  /* Not-configured banner */
-  #unconfigured-banner {
-    display: none;
-    background: #ffd16622; border: 1px solid var(--warn);
-    border-radius: 8px; padding: 12px 16px; margin-bottom: 20px;
-    font-size: 0.82rem; color: var(--warn); text-align: center;
+  .hdr-btn.switch-btn {
+    border-color: rgba(123, 97, 255, 0.4);
+    color: #fff;
   }
 
-  /* Toast */
+  /* ── Canvas / Grid Viewport ────────────────────────────────────── */
+  .grid-viewport {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+    overflow: hidden;
+    position: relative;
+    touch-action: none;
+  }
+
+  .matrix-grid-frame {
+    position: relative;
+    padding: 6px;
+    background: rgba(15, 15, 26, 0.85);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6), 0 0 24px rgba(123, 97, 255, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    touch-action: none;
+  }
+
+  #led-matrix-canvas {
+    display: block;
+    touch-action: none;
+    border-radius: 6px;
+    cursor: crosshair;
+    image-rendering: pixelated;
+  }
+
+  /* ── Bottom Floating Palette & Tool Controller ────────────────── */
+  .control-dock {
+    flex-shrink: 0;
+    background: rgba(15, 15, 24, 0.95);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-top: 1px solid var(--border);
+    padding: 10px 12px;
+    padding-bottom: max(10px, env(safe-area-inset-bottom));
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 20;
+  }
+
+  /* Quick Swatches Bar */
+  .swatches-scroll-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding: 2px 0;
+  }
+  .swatches-scroll-wrap::-webkit-scrollbar { display: none; }
+
+  .swatch-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: 2px solid transparent;
+    flex-shrink: 0;
+    cursor: pointer;
+    transition: transform 0.12s ease, border-color 0.12s ease;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+    position: relative;
+  }
+  .swatch-btn:active {
+    transform: scale(0.88);
+  }
+  .swatch-btn.active {
+    border-color: #fff;
+    transform: scale(1.12);
+    box-shadow: 0 0 12px currentColor, 0 0 4px #fff;
+  }
+
+  /* Tool & Action Bar */
+  .tools-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .tool-group {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 3px;
+    border-radius: 12px;
+  }
+
+  .tool-item-btn {
+    height: 38px;
+    padding: 0 10px;
+    border-radius: 9px;
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .tool-item-btn.active {
+    background: var(--accent);
+    color: #fff;
+    box-shadow: 0 0 12px var(--accent-glow);
+  }
+  .tool-item-btn:active {
+    transform: scale(0.94);
+  }
+
+  /* Active Color Orb & Picker Trigger */
+  .active-color-trigger {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    cursor: pointer;
+    box-shadow: 0 0 14px var(--accent-glow), inset 0 0 4px rgba(0,0,0,0.5);
+    flex-shrink: 0;
+    transition: transform 0.15s ease;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .active-color-trigger:active {
+    transform: scale(0.92);
+  }
+  .active-color-inner {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+  }
+
+  .extra-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .action-circle-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.12s ease;
+  }
+  .action-circle-btn:active {
+    background: rgba(255, 255, 255, 0.12);
+    transform: scale(0.92);
+  }
+
+  /* ── FULL SCREEN / MODAL COLOR PICKER ───────────────────────── */
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+  }
+  .modal-backdrop.open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .picker-card {
+    width: 100%;
+    max-width: 340px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 20px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 30px rgba(123, 97, 255, 0.2);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    transform: translateY(20px);
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .modal-backdrop.open .picker-card {
+    transform: translateY(0);
+  }
+
+  .picker-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .picker-title {
+    font-weight: 700;
+    font-size: 1.05rem;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* 2D Saturation / Value Spectrum Canvas */
+  .spectrum-canvas-wrap {
+    position: relative;
+    width: 100%;
+    height: 150px;
+    border-radius: 12px;
+    overflow: hidden;
+    cursor: crosshair;
+    border: 1px solid var(--border);
+    touch-action: none;
+  }
+  #spectrum-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+  .spectrum-cursor {
+    position: absolute;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    box-shadow: 0 0 8px rgba(0,0,0,0.8);
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    top: 0; left: 100%;
+  }
+
+  /* Hue Rainbow Slider */
+  .slider-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .slider-label {
+    font-size: 0.72rem;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--muted);
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .hue-slider {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 18px;
+    border-radius: 9px;
+    background: linear-gradient(to right,
+      #ff0000 0%, #ffff00 17%, #00ff00 33%,
+      #00ffff 50%, #0000ff 67%, #ff00ff 83%, #ff0000 100%);
+    outline: none;
+    border: 1px solid var(--border);
+    cursor: pointer;
+  }
+  .hue-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: #fff;
+    border: 2px solid var(--panel);
+    box-shadow: 0 0 8px rgba(0,0,0,0.6);
+    cursor: pointer;
+  }
+
+  /* Brightness Slider */
+  .bri-slider {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 14px;
+    border-radius: 7px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    outline: none;
+  }
+  .bri-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent-glow);
+    cursor: pointer;
+  }
+
+  /* Hex & Native Picker */
+  .color-info-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    padding: 8px 12px;
+    border-radius: 12px;
+  }
+  .picker-color-preview {
+    width: 28px; height: 28px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.2);
+    position: relative;
+    overflow: hidden;
+  }
+  .native-color-input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%; height: 100%;
+  }
+  .hex-display {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: #fff;
+    flex: 1;
+  }
+
+  /* Recents Row */
+  .recents-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+  .recent-swatch {
+    width: 26px; height: 26px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    cursor: pointer;
+  }
+
+  /* Modal Close Button */
+  .picker-apply-btn {
+    width: 100%;
+    height: 42px;
+    border-radius: 12px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    font-weight: 700;
+    font-size: 0.88rem;
+    cursor: pointer;
+    box-shadow: 0 4px 14px var(--accent-glow);
+  }
+  .picker-apply-btn:active {
+    transform: scale(0.97);
+  }
+
+  /* ── Gallery Cards & Drawer Styles ────────────────────────────── */
+  .gallery-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 10px;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    transition: border-color 0.15s ease, transform 0.15s ease;
+  }
+  .gallery-card:hover {
+    border-color: rgba(123, 97, 255, 0.4);
+  }
+
+  .gallery-thumb-wrap {
+    width: 64px;
+    height: 64px;
+    border-radius: 10px;
+    background: #090910;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    flex-shrink: 0;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  }
+  .gallery-thumb-canvas {
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+  }
+
+  .gallery-card-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    overflow: hidden;
+  }
+
+  .gallery-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+  }
+  .gallery-card-title {
+    font-weight: 700;
+    font-size: 0.92rem;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .gallery-res-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--cyan);
+    background: rgba(0, 240, 255, 0.1);
+    border: 1px solid rgba(0, 240, 255, 0.3);
+    padding: 1px 5px;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+
+  .gallery-card-meta {
+    font-size: 0.72rem;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .gallery-card-actions {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 4px;
+  }
+
+  .gallery-btn {
+    height: 28px;
+    padding: 0 8px;
+    border-radius: 7px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    transition: all 0.12s ease;
+  }
+  .gallery-btn:active {
+    transform: scale(0.93);
+    background: rgba(255, 255, 255, 0.15);
+  }
+  .gallery-btn.action-apply {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+    box-shadow: 0 0 10px var(--accent-glow);
+  }
+  .gallery-btn.btn-del {
+    color: var(--error);
+    border-color: rgba(255, 59, 92, 0.3);
+    padding: 0 6px;
+    margin-left: auto;
+  }
+  .gallery-btn.btn-del:active {
+    background: rgba(255, 59, 92, 0.2);
+  }
+
+  /* ── Toast Notification ───────────────────────────────────────── */
   #toast {
-    position: fixed; bottom: 24px; right: 24px;
-    background: var(--panel); border: 1px solid var(--border);
-    border-radius: 8px; padding: 10px 16px;
-    font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--text);
-    transform: translateY(80px); opacity: 0;
-    transition: all 0.3s cubic-bezier(.34,1.56,.64,1); z-index: 999; max-width: 320px;
+    position: fixed;
+    top: 66px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-20px);
+    background: rgba(22, 22, 36, 0.95);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 8px 16px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #fff;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 1000;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
   }
-  #toast.show  { transform: translateY(0); opacity: 1; }
-  #toast.ok    { border-color: var(--success); color: var(--success); }
-  #toast.error { border-color: var(--error);   color: var(--error); }
-
-  .hint { font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; color: var(--muted); margin-top: 12px; text-align: center; }
-
-  ::-webkit-scrollbar { width: 5px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  #toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
 </style>
 </head>
 <body>
-<header>
-  <div class="logo"><div class="logo-dot"></div>WLED pixel painter</div>
-  <div class="status-bar">
-    <div class="status-dot" id="status-dot"></div>
-    <span id="status-text">loading…</span>
-    <a href="/tablet" style="font-family:'JetBrains Mono',monospace;font-size:0.65rem;color:var(--muted);text-decoration:none;padding:3px 8px;border:1px solid var(--border);border-radius:4px;margin-left:6px">Tablet ↗</a>
+
+<div class="bg-glow-orb"></div>
+
+<!-- ═════════════════════════════════════════════════════════════════
+     SCREEN 1: PIN PROMPT GATE
+     ═════════════════════════════════════════════════════════════════ -->
+<div id="view-pin">
+  <div class="pin-card">
+    <div class="pin-icon-wrap">
+      <div class="pin-mini-grid">
+        <div class="pin-mini-pixel"></div>
+        <div class="pin-mini-pixel"></div>
+        <div class="pin-mini-pixel"></div>
+        <div class="pin-mini-pixel"></div>
+        <div class="pin-mini-pixel"></div>
+        <div class="pin-mini-pixel"></div>
+        <div class="pin-mini-pixel"></div>
+        <div class="pin-mini-pixel"></div>
+        <div class="pin-mini-pixel"></div>
+        <div class="pin-mini-pixel"></div>
+        <div class="pin-mini-pixel"></div>
+        <div class="pin-mini-pixel"></div>
+        <div class="pin-mini-pixel"></div>
+        <div class="pin-mini-pixel"></div>
+        <div class="pin-mini-pixel"></div>
+        <div class="pin-mini-pixel"></div>
+      </div>
+    </div>
+
+    <h1 class="pin-title">Matrix Painter</h1>
+    <p class="pin-subtitle">Enter your access PIN to connect to your assigned LED matrix</p>
+
+    <!-- Masked PIN indicators (Never displays raw digits) -->
+    <div class="pin-dots-row" id="pin-dots">
+      <div class="pin-dot"></div>
+      <div class="pin-dot"></div>
+      <div class="pin-dot"></div>
+      <div class="pin-dot"></div>
+    </div>
+
+    <div class="pin-error-msg" id="pin-error"></div>
+
+    <!-- Tactile Keypad -->
+    <div class="keypad-grid">
+      <button class="key-btn" onclick="pressPinKey('1')">1</button>
+      <button class="key-btn" onclick="pressPinKey('2')">2</button>
+      <button class="key-btn" onclick="pressPinKey('3')">3</button>
+      <button class="key-btn" onclick="pressPinKey('4')">4</button>
+      <button class="key-btn" onclick="pressPinKey('5')">5</button>
+      <button class="key-btn" onclick="pressPinKey('6')">6</button>
+      <button class="key-btn" onclick="pressPinKey('7')">7</button>
+      <button class="key-btn" onclick="pressPinKey('8')">8</button>
+      <button class="key-btn" onclick="pressPinKey('9')">9</button>
+      <button class="key-btn action-key" onclick="clearPin()">C</button>
+      <button class="key-btn" onclick="pressPinKey('0')">0</button>
+      <button class="key-btn action-key" onclick="backspacePin()">⌫</button>
+    </div>
+
+    <button class="pin-connect-btn" id="btn-submit-pin" onclick="submitPin()">
+      <span>Connect Matrix</span>
+      <span>→</span>
+    </button>
   </div>
-</header>
+</div>
 
-<main>
-  <aside>
-    <!-- Tools -->
-    <div class="panel">
-      <div class="panel-title">🖌 Tools</div>
-      <div class="tools">
-        <div class="tool-btn active" id="tool-paint" onclick="setTool('paint')"><span class="tool-icon">✏️</span>Paint</div>
-        <div class="tool-btn" id="tool-erase" onclick="setTool('erase')"><span class="tool-icon">🗑</span>Erase</div>
-        <div class="tool-btn" id="tool-fill"  onclick="setTool('fill')"><span class="tool-icon">🪣</span>Fill</div>
-      </div>
-    </div>
-
-    <!-- Color -->
-    <div class="panel">
-      <div class="panel-title">🎨 Color</div>
-      <div class="color-preview" id="color-preview" style="background:#ff4444">
-        <input type="color" id="color-picker" value="#ff4444" oninput="onColorPick(this.value)" />
-      </div>
-      <div class="swatches" id="swatches"></div>
+<!-- ═════════════════════════════════════════════════════════════════
+     SCREEN 2: ACTIVE MATRIX PAINTER
+     ═════════════════════════════════════════════════════════════════ -->
+<div id="view-painter">
+  <!-- Top Header -->
+  <header>
+    <div class="header-matrix-info">
+      <div class="matrix-dot" id="matrix-status-dot"></div>
+      <div class="matrix-name" id="display-matrix-name">Matrix</div>
+      <div class="matrix-badge" id="display-matrix-res">16×16</div>
     </div>
 
-    <!-- Brightness -->
-    <div class="panel">
-      <div class="panel-title">☀ Brightness <span class="val-label" id="bri-label">128</span></div>
-      <input type="range" id="brightness" min="0" max="255" value="128"
-        oninput="document.getElementById('bri-label').textContent=this.value" />
+    <div class="header-actions">
+      <button class="hdr-btn" onclick="openGalleryModal()" title="View Saved Creations Gallery">🖼️ Gallery</button>
+      <button class="hdr-btn" onclick="openSaveArtModal()" title="Save creation to gallery">💾 Save</button>
+      <button class="hdr-btn" onclick="syncMatrixFromDevice()" title="Refresh live pixels from controller">🔄 Sync</button>
+      <button class="hdr-btn" onclick="confirmClearMatrix()" title="Clear matrix canvas">🗑 Clear</button>
+      <button class="hdr-btn switch-btn" onclick="switchMatrixSession()" title="Switch to another matrix PIN">🚪 Switch</button>
     </div>
+  </header>
 
-    <!-- Send -->
-    <div class="panel">
-      <div class="panel-title">📡 Send</div>
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-        <input type="checkbox" id="multiplayer" checked style="accent-color:var(--accent);width:16px;height:16px"
-          onchange="onMultiplayerToggle(this.checked)" />
-        <label for="multiplayer" style="margin:0;color:var(--text);font-size:0.8rem">Multiplayer</label>
-        <span id="user-count" style="font-family:'JetBrains Mono',monospace;font-size:0.65rem;color:var(--muted);margin-left:auto"></span>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
-        <input type="checkbox" id="live-send" checked style="accent-color:var(--accent);width:16px;height:16px" />
-        <label style="margin:0;color:var(--text);font-size:0.8rem">Live send while painting</label>
-      </div>
-      <div class="btn-row">
-        <button class="btn-primary"   onclick="sendAll()">Send All</button>
-        <button class="btn-secondary" onclick="clearCanvas()">Clear</button>
-      </div>
-      <button class="btn-danger" onclick="clearWled()">Clear WLED Strip</button>
+  <!-- Interactive Grid Viewport -->
+  <div class="grid-viewport" id="viewport">
+    <div class="matrix-grid-frame" id="grid-frame">
+      <canvas id="led-matrix-canvas"></canvas>
     </div>
-  </aside>
-
-  <div class="canvas-area">
-    <div id="unconfigured-banner">
-      ⚠ WLED not configured — <a href="/admin" style="color:var(--warn)">go to Admin</a> to set up your device.
-    </div>
-    <div id="mode-badge" class="mode-badge">⏳ loading config…</div>
-    <div class="grid-wrap">
-      <div id="pixel-grid"></div>
-      <canvas id="grid-overlay" class="grid-overlay"></canvas>
-    </div>
-    <div class="hint" id="hint"></div>
   </div>
-</main>
 
+  <!-- Bottom Control Dock -->
+  <div class="control-dock">
+    <!-- Quick Color Ribbon (14 Vivid Swatches) -->
+    <div class="swatches-scroll-wrap" id="quick-swatches">
+      <!-- Injected by JS -->
+    </div>
+
+    <!-- Tools & Main Controller Row -->
+    <div class="tools-row">
+      <!-- Active Color Disc (Tap to open full Color Picker modal) -->
+      <div class="active-color-trigger" onclick="openColorPickerModal()" title="Open Full Color Picker">
+        <div class="active-color-inner" id="active-color-disc"></div>
+      </div>
+
+      <!-- Creative Drawing Tools -->
+      <div class="tool-group">
+        <button class="tool-item-btn active" id="tool-brush" onclick="setTool('brush')">
+          <span>🖌</span> Brush
+        </button>
+        <button class="tool-item-btn" id="tool-fill" onclick="setTool('fill')">
+          <span>🪣</span> Fill
+        </button>
+        <button class="tool-item-btn" id="tool-eraser" onclick="setTool('eraser')">
+          <span>🧹</span> Erase
+        </button>
+        <button class="tool-item-btn" id="tool-picker" onclick="setTool('picker')">
+          <span>👁</span> Pick
+        </button>
+      </div>
+
+      <!-- Extra Quick Actions -->
+      <div class="extra-actions">
+        <button class="action-circle-btn" onclick="openSaveArtModal()" title="Save creation to Gallery">💾</button>
+        <button class="action-circle-btn" onclick="undoAction()" title="Undo last action">↩</button>
+        <button class="action-circle-btn" onclick="toggleBrightnessDrawer()" title="Adjust matrix brightness">☀️</button>
+      </div>
+    </div>
+
+    <!-- Collapsible Brightness Drawer -->
+    <div id="brightness-drawer" style="display:none; padding:6px 4px 2px;">
+      <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--muted); font-family:'JetBrains Mono',monospace; margin-bottom:4px;">
+        <span>Hardware Brightness</span>
+        <span id="bri-val-label" style="color:var(--accent); font-weight:700;">128</span>
+      </div>
+      <input type="range" class="bri-slider" id="bri-range" min="1" max="255" value="128" oninput="onBrightnessInput(this.value)" />
+    </div>
+  </div>
+</div>
+
+<!-- ═════════════════════════════════════════════════════════════════
+     COLOR PICKER MODAL (Full 2D Spectrum & Sliders)
+     ═════════════════════════════════════════════════════════════════ -->
+<div class="modal-backdrop" id="modal-color-picker" onclick="onModalBackdropClick(event)">
+  <div class="picker-card" onclick="event.stopPropagation()">
+    <div class="picker-header">
+      <div class="picker-title">
+        <span>🎨</span> Color Palette
+      </div>
+      <button class="action-circle-btn" style="width:30px; height:30px; font-size:0.8rem;" onclick="closeColorPickerModal()">✕</button>
+    </div>
+
+    <!-- 2D Saturation / Value Canvas -->
+    <div class="spectrum-canvas-wrap" id="spectrum-wrap">
+      <canvas id="spectrum-canvas"></canvas>
+      <div class="spectrum-cursor" id="spectrum-cursor"></div>
+    </div>
+
+    <!-- Rainbow Hue Slider -->
+    <div class="slider-row">
+      <div class="slider-label">
+        <span>Hue</span>
+        <span id="hue-label">0°</span>
+      </div>
+      <input type="range" class="hue-slider" id="hue-slider" min="0" max="360" value="0" oninput="onHueSliderInput(this.value)" />
+    </div>
+
+    <!-- Hex readout & Native input -->
+    <div class="color-info-bar">
+      <div class="picker-color-preview" id="picker-preview-box">
+        <input type="color" class="native-color-input" id="native-color-picker" onchange="onNativeColorChange(this.value)" />
+      </div>
+      <div class="hex-display" id="picker-hex-label">#FF0055</div>
+      <button class="hdr-btn" style="padding:4px 8px; font-size:0.75rem;" onclick="document.getElementById('native-color-picker').click()">System</button>
+    </div>
+
+    <!-- Recent Colors History -->
+    <div class="slider-row">
+      <div class="slider-label"><span>Recent Colors</span></div>
+      <div class="recents-row" id="recents-row">
+        <!-- Injected by JS -->
+      </div>
+    </div>
+
+    <button class="picker-apply-btn" onclick="closeColorPickerModal()">Apply Color</button>
+  </div>
+</div>
+
+<!-- ═════════════════════════════════════════════════════════════════
+     SAVE ARTWORK MODAL
+     ═════════════════════════════════════════════════════════════════ -->
+<div class="modal-backdrop" id="modal-save-art" onclick="onModalBackdropClick(event)">
+  <div class="picker-card" style="max-width:360px;" onclick="event.stopPropagation()">
+    <div class="picker-header">
+      <div class="picker-title">
+        <span>💾</span> Save to Gallery
+      </div>
+      <button class="action-circle-btn" style="width:30px; height:30px; font-size:0.8rem;" onclick="closeSaveArtModal()">✕</button>
+    </div>
+
+    <!-- Live Micro Preview of current matrix -->
+    <div style="display:flex; justify-content:center; padding:6px 0;">
+      <canvas id="save-art-preview" width="128" height="128" style="width:128px; height:128px; border-radius:12px; border:1px solid var(--border); box-shadow:0 8px 24px rgba(123,97,255,0.25); background:#0c0c14; image-rendering:pixelated;"></canvas>
+    </div>
+
+    <div style="display:flex; flex-direction:column; gap:5px;">
+      <label style="font-size:0.75rem; color:var(--muted); font-family:'JetBrains Mono',monospace;">Title / Artwork Name</label>
+      <input type="text" id="save-art-title" placeholder="e.g. Neon Cyber Star" maxlength="48" style="height:42px; border-radius:10px; background:var(--panel); border:1px solid var(--border); color:#fff; font-family:'Space Grotesk',sans-serif; font-size:0.95rem; font-weight:600; padding:0 12px; outline:none;" />
+    </div>
+
+    <div style="display:flex; flex-direction:column; gap:5px;">
+      <label style="font-size:0.75rem; color:var(--muted); font-family:'JetBrains Mono',monospace;">Artist / Tag</label>
+      <input type="text" id="save-art-author" placeholder="e.g. Guest" maxlength="32" style="height:42px; border-radius:10px; background:var(--panel); border:1px solid var(--border); color:#fff; font-family:'Space Grotesk',sans-serif; font-size:0.95rem; padding:0 12px; outline:none;" />
+    </div>
+
+    <button class="picker-apply-btn" id="btn-submit-save-art" onclick="submitSaveArtwork()">
+      Save to Gallery ✓
+    </button>
+  </div>
+</div>
+
+<!-- ═════════════════════════════════════════════════════════════════
+     GALLERY BROWSER MODAL (Saved Creations & Long-Term Memory)
+     ═════════════════════════════════════════════════════════════════ -->
+<div class="modal-backdrop" id="modal-gallery" onclick="onModalBackdropClick(event)">
+  <div class="picker-card" style="max-width:500px; max-height:85vh; display:flex; flex-direction:column;" onclick="event.stopPropagation()">
+    <div class="picker-header" style="flex-shrink:0;">
+      <div class="picker-title">
+        <span>🖼️</span> Creation Gallery
+        <span id="gallery-count-badge" style="font-size:0.72rem; font-family:'JetBrains Mono',monospace; background:rgba(123,97,255,0.2); border:1px solid var(--accent); color:#fff; padding:2px 8px; border-radius:6px; margin-left:8px;">0</span>
+      </div>
+      <button class="action-circle-btn" style="width:30px; height:30px; font-size:0.8rem;" onclick="closeGalleryModal()">✕</button>
+    </div>
+
+    <!-- Gallery Cards Scrollable Area -->
+    <div id="gallery-list" style="flex:1; overflow-y:auto; padding:10px 2px; display:flex; flex-direction:column; gap:10px; scrollbar-width:none;">
+      <!-- Populated dynamically by JS -->
+    </div>
+  </div>
+</div>
+
+<!-- Toast notification popup -->
 <div id="toast"></div>
 
+<!-- ═════════════════════════════════════════════════════════════════
+     JAVASCRIPT LOGIC
+     ═════════════════════════════════════════════════════════════════ -->
 <script>
-const PALETTE = [
-  "#ff0000","#ff6600","#ffcc00","#ffff00","#00ff00","#00ffcc","#00ccff","#0066ff",
-  "#0000ff","#9900ff","#ff00ff","#ff0099","#ffffff","#aaaaaa","#555555","#000000",
+// ── State Variables ──────────────────────────────────────────────────────────
+let sessionToken   = null;
+let currentMatrix  = null; // { id, name, cols, rows, ledCount, serpentine }
+let matrixCanvas   = [];   // Array of [r, g, b]
+let activeTool     = "brush"; // "brush", "fill", "eraser", "picker"
+let activeColor    = [255, 0, 85]; // RGB default
+let currentHue     = 340;
+let currentSat     = 1.0;
+let currentVal     = 1.0;
+let recentColors   = [];
+let isDrawing      = false;
+let lastDrawCoords = null; // { col, row }
+let pendingDeltas  = [];
+let sendTimer      = null;
+let sseConnection  = null;
+let currentPinInput= "";
+const undoStack    = []; // Array of previous canvas snapshots
+
+// 14 Hand-picked Vibrant Neon LED Swatches
+const QUICK_PALETTE = [
+  [255, 255, 255], // Pure White
+  [255, 228, 182], // Warm White
+  [255, 0, 85],   // Neon Pink/Red
+  [255, 77, 0],    // Flame Orange
+  [255, 220, 0],   // Cyber Yellow
+  [57, 255, 20],   // Neon Lime
+  [0, 230, 118],   // Emerald Green
+  [0, 240, 255],   // Cyan
+  [0, 150, 255],   // Sky Blue
+  [41, 70, 255],   // Electric Blue
+  [157, 0, 255],   // Neon Violet
+  [255, 0, 170],   // Magenta
+  [255, 105, 180], // Hot Pink
+  [0, 0, 0]        // Off / Black
 ];
 
-let cols = 16, rows = 1, cellSize = 24, serpentine = false, isMatrix = false;
-let tool = "paint", color = "#ff4444";
-let pixels = [], painting = false, sendDebounce = null;
-let configured = false;
+// ── DOM Elements ─────────────────────────────────────────────────────────────
+const viewPin       = document.getElementById("view-pin");
+const viewPainter   = document.getElementById("view-painter");
+const pinDots       = document.getElementById("pin-dots").children;
+const pinError      = document.getElementById("pin-error");
+const btnSubmitPin  = document.getElementById("btn-submit-pin");
+const canvasEl      = document.getElementById("led-matrix-canvas");
+const ctx           = canvasEl.getContext("2d");
+const discEl        = document.getElementById("active-color-disc");
+const quickSwatches = document.getElementById("quick-swatches");
 
-// ── Multiplayer state ─────────────────────────────────────────────────────────
-let multiplayer = true;
-let dirtyPixels = new Set();   // grid indices changed since last send
-let evtSource   = null;
-let userCount   = 0;
-
-// ── Boot ──────────────────────────────────────────────────────────────────────
-window.addEventListener("DOMContentLoaded", async () => {
-  buildSwatches();
-  await loadConfig();
-  buildGrid();
-  if (multiplayer) connectMultiplayer();
-});
-
-async function loadConfig() {
-  try {
-    const res  = await fetch("/api/config");
-    const data = await res.json();
-    if (data.ok) {
-      const c = data.config;
-      cols       = c.cols       ?? 16;
-      rows       = c.rows       ?? 1;
-      serpentine = c.serpentine ?? false;
-      isMatrix   = c.isMatrix   ?? false;
-      configured = !!c.deviceName || c.ledCount > 0;
-
-      const bri = c.brightness ?? 128;
-      document.getElementById("brightness").value = bri;
-      document.getElementById("bri-label").textContent = bri;
-
-      updateModeBadge(c);
-      if (!configured) document.getElementById("unconfigured-banner").style.display = "block";
-      else             setStatus("ok", c.deviceName || "connected");
-    }
-  } catch (e) {
-    setStatus("error", "backend offline");
-  }
-}
-
-function updateModeBadge(cfg) {
-  const badge = document.getElementById("mode-badge");
-  if (cfg.isMatrix) {
-    badge.textContent = `⊞ Matrix ${cfg.cols}×${cfg.rows}`;
-    badge.className = "mode-badge matrix";
-  } else {
-    badge.textContent = `— Strip  ${cfg.ledCount ?? cfg.cols} LEDs`;
-    badge.className = "mode-badge";
-  }
-}
-
-// ── Grid ──────────────────────────────────────────────────────────────────────
-function buildGrid() {
-  const maxDim = Math.max(cols, rows);
-  cellSize = Math.max(6, Math.min(40, Math.floor(680 / maxDim)));
-
-  const total = cols * rows;
-  pixels = Array.from({ length: total }, () => ({ r:0, g:0, b:0 }));
-
-  const grid = document.getElementById("pixel-grid");
-  grid.style.gridTemplateColumns = `repeat(${cols}, ${cellSize}px)`;
-  grid.style.gridTemplateRows    = `repeat(${rows}, ${cellSize}px)`;
-  grid.innerHTML = "";
-
-  for (let idx = 0; idx < total; idx++) {
-    const cell = document.createElement("div");
-    cell.className = "pixel";
-    cell.dataset.idx = idx;
-    cell.style.width  = cellSize + "px";
-    cell.style.height = cellSize + "px";
-    cell.style.background = "#000";
-    cell.addEventListener("mouseenter", e => {
-      const i = parseInt(e.target.dataset.idx);
-      document.getElementById("hint").textContent =
-        `LED ${ledIndex(i)} · col ${i % cols} row ${Math.floor(i / cols)} · ${total} total`;
-      if (painting) applyTool(i);
-    });
-    cell.addEventListener("mousedown", e => {
-      e.preventDefault(); painting = true; applyTool(parseInt(e.target.dataset.idx));
-    });
-    grid.appendChild(cell);
-  }
-  drawGridLines();
-  document.getElementById("hint").textContent = `${total} LEDs`;
-  document.addEventListener("mouseup", () => { painting = false; });
-}
-
-function ledIndex(gridIdx) {
-  const row = Math.floor(gridIdx / cols);
-  const col = gridIdx % cols;
-  if (serpentine && row % 2 === 1) return row * cols + (cols - 1 - col);
-  return gridIdx;
-}
-
-// Inverse of ledIndex — serpentine is its own inverse, non-serpentine is identity.
-function ledToGridIndex(ledIdx) {
-  const row = Math.floor(ledIdx / cols);
-  const col = ledIdx % cols;
-  if (serpentine && row % 2 === 1) return row * cols + (cols - 1 - col);
-  return ledIdx;
-}
-
-function drawGridLines() {
-  const canvas = document.getElementById("grid-overlay");
-  const w = cols * cellSize, h = rows * cellSize;
-  canvas.width = w; canvas.height = h;
-  canvas.style.width = w + "px"; canvas.style.height = h + "px";
-  if (cellSize < 8) { canvas.style.display = "none"; return; }
-  canvas.style.display = "block";
-  const ctx = canvas.getContext("2d");
-  ctx.clearRect(0, 0, w, h);
-  ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 0.5;
-  for (let x = 0; x <= cols; x++) { ctx.beginPath(); ctx.moveTo(x*cellSize,0); ctx.lineTo(x*cellSize,h); ctx.stroke(); }
-  for (let y = 0; y <= rows; y++) { ctx.beginPath(); ctx.moveTo(0,y*cellSize); ctx.lineTo(w,y*cellSize); ctx.stroke(); }
-}
-
-// ── Tools ─────────────────────────────────────────────────────────────────────
-function applyTool(gridIdx) {
-  if (tool === "paint") paintPixel(gridIdx, hexToRgb(color));
-  else if (tool === "erase") paintPixel(gridIdx, {r:0,g:0,b:0});
-  else if (tool === "fill") {
-    const target = {...pixels[gridIdx]}, fill = hexToRgb(color);
-    if (rgbEq(target, fill)) return;
-    floodFill(gridIdx, target, fill);
-  }
-  if (document.getElementById("live-send").checked) scheduleSend();
-}
-
-function paintPixel(gridIdx, rgb) {
-  pixels[gridIdx] = {...rgb};
-  dirtyPixels.add(gridIdx);
-  const cell = document.querySelector(`[data-idx="${gridIdx}"]`);
-  if (cell) cell.style.background = `rgb(${rgb.r},${rgb.g},${rgb.b})`;
-}
-
-function floodFill(startIdx, target, fill) {
-  const stack = [startIdx], visited = new Set();
-  while (stack.length) {
-    const idx = stack.pop();
-    if (idx < 0 || idx >= pixels.length || visited.has(idx) || !rgbEq(pixels[idx], target)) continue;
-    visited.add(idx); paintPixel(idx, fill);
-    const row = Math.floor(idx/cols), col = idx%cols;
-    if (col > 0)        stack.push(idx-1);
-    if (col < cols-1)   stack.push(idx+1);
-    if (row > 0)        stack.push(idx-cols);
-    if (row < rows-1)   stack.push(idx+cols);
-  }
-}
-
-// ── Send ──────────────────────────────────────────────────────────────────────
-function scheduleSend() {
-  clearTimeout(sendDebounce);
-  sendDebounce = setTimeout(sendChanges, 60);
-}
-
-// Called by live-send: sends only dirty pixels in multiplayer, full canvas in single-player.
-async function sendChanges() {
-  const brightness = parseInt(document.getElementById("brightness").value);
-  let body;
-
-  if (multiplayer) {
-    if (dirtyPixels.size === 0) return;
-    const delta = [];
-    for (const gridIdx of dirtyPixels) {
-      delta.push([ledIndex(gridIdx), pixels[gridIdx].r, pixels[gridIdx].g, pixels[gridIdx].b]);
-    }
-    dirtyPixels.clear();
-    body = { delta, brightness };
-  } else {
-    const ledPixels = Array(pixels.length);
-    for (let i = 0; i < pixels.length; i++) {
-      const p = pixels[i];
-      ledPixels[ledIndex(i)] = [p.r, p.g, p.b];
-    }
-    body = { pixels: ledPixels, brightness };
-  }
-  await postSend(body);
-}
-
-// "Send All" button: always pushes the full local canvas regardless of mode.
-async function sendAll() {
-  const brightness = parseInt(document.getElementById("brightness").value);
-  const ledPixels  = Array(pixels.length);
-  for (let i = 0; i < pixels.length; i++) {
-    const p = pixels[i];
-    ledPixels[ledIndex(i)] = [p.r, p.g, p.b];
-  }
-  dirtyPixels.clear();
-  await postSend({ pixels: ledPixels, brightness });
-}
-
-async function postSend(body) {
-  setStatus("busy", "sending…");
-  try {
-    const res  = await fetch("/api/send", {
-      method: "POST", headers: {"Content-Type":"application/json"},
-      body: JSON.stringify(body),
-    });
-    const data = await res.json();
-    if (data.ok) setStatus("ok", body.delta ? `+${body.delta.length} px` : `sent ${pixels.length} LEDs`);
-    else { setStatus("error", "send failed"); toast(data.error, "error"); }
-  } catch (e) {
-    setStatus("error", "backend unreachable"); toast(e.message, "error");
-  }
-}
-
-async function clearWled() {
-  setStatus("busy", "clearing…");
-  try {
-    const res  = await fetch("/api/clear", { method:"POST", headers:{"Content-Type":"application/json"}, body:"{}" });
-    const data = await res.json();
-    if (data.ok) { clearCanvas(); setStatus("ok", "strip cleared"); toast("Strip cleared ✓", "ok"); }
-    else         { setStatus("error", "clear failed"); toast(data.error, "error"); }
-  } catch (e) { setStatus("error", "backend unreachable"); toast(e.message, "error"); }
-}
-
-function clearCanvas() {
-  pixels = pixels.map(() => ({r:0,g:0,b:0}));
-  dirtyPixels.clear();
-  document.querySelectorAll(".pixel").forEach(c => c.style.background = "#000");
-}
-
-// ── Multiplayer ───────────────────────────────────────────────────────────────
-function onMultiplayerToggle(enabled) {
-  multiplayer = enabled;
-  dirtyPixels.clear();
-  if (enabled) connectMultiplayer();
-  else disconnectMultiplayer();
-}
-
-function connectMultiplayer() {
-  if (evtSource) { evtSource.close(); evtSource = null; }
-  evtSource = new EventSource("/api/events");
-  evtSource.addEventListener("canvas", e => applyFullCanvas(JSON.parse(e.data)));
-  evtSource.addEventListener("delta",  e => applyDelta(JSON.parse(e.data)));
-  evtSource.addEventListener("users",  e => { userCount = parseInt(e.data); updateUserCount(); });
-  evtSource.onerror = () => { /* degrade silently — single-player still works */ };
-}
-
-function disconnectMultiplayer() {
-  if (evtSource) { evtSource.close(); evtSource = null; }
-  userCount = 0;
-  updateUserCount();
-}
-
-function applyFullCanvas(canvas) {
-  canvas.forEach(([r, g, b], ledIdx) => {
-    const gridIdx = ledToGridIndex(ledIdx);
-    if (gridIdx >= 0 && gridIdx < pixels.length) {
-      pixels[gridIdx] = {r, g, b};
-      const cell = document.querySelector(`[data-idx="${gridIdx}"]`);
-      if (cell) cell.style.background = `rgb(${r},${g},${b})`;
-    }
-  });
-}
-
-function applyDelta(changes) {
-  changes.forEach(([ledIdx, r, g, b]) => {
-    const gridIdx = ledToGridIndex(ledIdx);
-    if (gridIdx >= 0 && gridIdx < pixels.length) {
-      pixels[gridIdx] = {r, g, b};
-      const cell = document.querySelector(`[data-idx="${gridIdx}"]`);
-      if (cell) cell.style.background = `rgb(${r},${g},${b})`;
-    }
-  });
-}
-
-function updateUserCount() {
-  const el = document.getElementById("user-count");
-  if (!el) return;
-  el.textContent = (multiplayer && userCount > 0) ? `${userCount} online` : "";
-}
-
-// ── UI helpers ────────────────────────────────────────────────────────────────
-function setTool(t) {
-  tool = t;
-  ["paint","erase","fill"].forEach(id => document.getElementById("tool-"+id).classList.toggle("active", id===t));
-}
-
-function buildSwatches() {
-  const cont = document.getElementById("swatches");
-  const eraser = document.createElement("div");
-  eraser.className = "swatch eraser"; eraser.title = "Eraser";
-  eraser.onclick = () => setTool("erase");
-  cont.appendChild(eraser);
-  PALETTE.forEach(hex => {
-    const s = document.createElement("div");
-    s.className = "swatch"; s.style.background = hex; s.title = hex;
-    s.onclick = () => {
-      color = hex;
-      document.getElementById("color-picker").value = hex;
-      document.getElementById("color-preview").style.background = hex;
-      setTool("paint");
-      document.querySelectorAll(".swatch").forEach(el => el.classList.remove("active"));
-      s.classList.add("active");
-    };
-    cont.appendChild(s);
-  });
-}
-
-function onColorPick(hex) {
-  color = hex;
-  document.getElementById("color-preview").style.background = hex;
-  setTool("paint");
-}
-
-function setStatus(type, text) {
-  document.getElementById("status-dot").className = "status-dot " + type;
-  document.getElementById("status-text").textContent = text;
-}
-
-let toastTimer;
-function toast(msg, type="ok") {
-  const el = document.getElementById("toast");
-  el.textContent = msg; el.className = "show " + type;
+// ── Toast Helper ─────────────────────────────────────────────────────────────
+let toastTimer = null;
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { el.className = ""; }, 3000);
+  toastTimer = setTimeout(() => t.classList.remove("show"), 2200);
+}
+
+// ── Vibration / Tactile Feedback ──────────────────────────────────────────────
+function hapticPulse(ms = 15) {
+  if (navigator.vibrate) {
+    try { navigator.vibrate(ms); } catch {}
+  }
+}
+
+// ── Helpers: RGB & Hex & HSV ─────────────────────────────────────────────────
+function rgbToHex([r, g, b]) {
+  return "#" + [r, g, b].map(x => Math.round(x).toString(16).padStart(2, "0")).join("").toUpperCase();
 }
 
 function hexToRgb(hex) {
-  return { r: parseInt(hex.slice(1,3),16), g: parseInt(hex.slice(3,5),16), b: parseInt(hex.slice(5,7),16) };
+  const clean = hex.replace("#", "");
+  const num = parseInt(clean, 16);
+  return [(num >> 16) & 255, (num >> 8) & 255, num & 255];
 }
-function rgbEq(a, b) { return a.r===b.r && a.g===b.g && a.b===b.b; }
+
+function hsvToRgb(h, s, v) {
+  let r, g, b;
+  const i = Math.floor((h / 60) % 6);
+  const f = (h / 60) - Math.floor(h / 60);
+  const p = v * (1 - s);
+  const q = v * (1 - f * s);
+  const t = v * (1 - (1 - f) * s);
+  switch (i) {
+    case 0: r = v; g = t; b = p; break;
+    case 1: r = q; g = v; b = p; break;
+    case 2: r = p; g = v; b = t; break;
+    case 3: r = p; g = q; b = v; break;
+    case 4: r = t; g = p; b = v; break;
+    case 5: r = v; g = p; b = q; break;
+  }
+  return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+}
+
+function updateActiveColor(rgb) {
+  activeColor = [...rgb];
+  discEl.style.backgroundColor = `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+  discEl.style.boxShadow = `0 0 16px rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.55)`;
+
+  // Keep modal in sync
+  document.getElementById("picker-preview-box").style.backgroundColor = `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+  document.getElementById("picker-hex-label").textContent = rgbToHex(rgb);
+  document.getElementById("native-color-picker").value = rgbToHex(rgb);
+
+  // Sync quick swatches active ring
+  const hex = rgbToHex(rgb);
+  document.querySelectorAll(".swatch-btn").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.hex === hex);
+  });
+}
+
+function addRecentColor(rgb) {
+  const hex = rgbToHex(rgb);
+  recentColors = [rgb, ...recentColors.filter(c => rgbToHex(c) !== hex)].slice(0, 7);
+  renderRecentColors();
+}
+
+function renderRecentColors() {
+  const row = document.getElementById("recents-row");
+  row.innerHTML = "";
+  recentColors.forEach(rgb => {
+    const sw = document.createElement("div");
+    sw.className = "recent-swatch";
+    sw.style.backgroundColor = `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+    sw.onclick = () => {
+      updateActiveColor(rgb);
+      closeColorPickerModal();
+    };
+    row.appendChild(sw);
+  });
+}
+
+// ── PIN Screen Keypad & Submission ───────────────────────────────────────────
+function updatePinDots() {
+  for (let i = 0; i < pinDots.length; i++) {
+    pinDots[i].classList.toggle("filled", i < currentPinInput.length);
+  }
+  pinError.classList.remove("visible");
+  btnSubmitPin.disabled = currentPinInput.length === 0;
+}
+
+function pressPinKey(digit) {
+  hapticPulse(15);
+  if (currentPinInput.length >= 8) return;
+  currentPinInput += digit;
+  updatePinDots();
+
+  // Auto-submit once 4 digits are entered
+  if (currentPinInput.length === 4) {
+    submitPin();
+  }
+}
+
+function backspacePin() {
+  hapticPulse(15);
+  if (currentPinInput.length > 0) {
+    currentPinInput = currentPinInput.slice(0, -1);
+    updatePinDots();
+  }
+}
+
+function clearPin() {
+  hapticPulse(15);
+  currentPinInput = "";
+  updatePinDots();
+}
+
+// Physical keyboard listener for laptops or USB/Bluetooth keyboards
+window.addEventListener("keydown", (e) => {
+  if (viewPin.classList.contains("hidden")) return;
+  if (e.key >= "0" && e.key <= "9") {
+    pressPinKey(e.key);
+  } else if (e.key === "Backspace") {
+    backspacePin();
+  } else if (e.key === "Escape") {
+    clearPin();
+  } else if (e.key === "Enter") {
+    submitPin();
+  }
+});
+
+async function submitPin() {
+  if (!currentPinInput) return;
+  btnSubmitPin.disabled = true;
+  btnSubmitPin.innerHTML = `<span>Connecting…</span>`;
+  pinError.classList.remove("visible");
+
+  try {
+    const res = await fetch("/api/matrix/auth", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pin: currentPinInput })
+    });
+    const data = await res.json();
+
+    if (data.ok && data.token && data.matrix) {
+      hapticPulse(30);
+      sessionToken  = data.token;
+      currentMatrix = data.matrix;
+      sessionStorage.setItem("wled_matrix_token", sessionToken);
+
+      // Transition to Painter View (PIN remains completely hidden from URL and UI)
+      enterPainterView();
+    } else {
+      hapticPulse(60);
+      pinError.textContent = data.error || "Incorrect PIN code. Please check with your host.";
+      pinError.classList.add("visible");
+      currentPinInput = "";
+      updatePinDots();
+    }
+  } catch (err) {
+    pinError.textContent = "Connection error. Please try again.";
+    pinError.classList.add("visible");
+  } finally {
+    btnSubmitPin.disabled = false;
+    btnSubmitPin.innerHTML = `<span>Connect Matrix</span><span>→</span>`;
+  }
+}
+
+function switchMatrixSession() {
+  if (!confirm("Disconnect from this matrix and enter another PIN?")) return;
+  sessionToken = null;
+  currentMatrix = null;
+  sessionStorage.removeItem("wled_matrix_token");
+  currentPinInput = "";
+  updatePinDots();
+
+  if (sseConnection) {
+    try { sseConnection.close(); } catch {}
+    sseConnection = null;
+  }
+
+  viewPainter.classList.remove("active");
+  viewPin.classList.remove("hidden");
+  showToast("Disconnected from matrix");
+}
+
+// ── Enter Painter Mode ────────────────────────────────────────────────────────
+async function enterPainterView() {
+  viewPin.classList.add("hidden");
+  viewPainter.classList.add("active");
+
+  document.getElementById("display-matrix-name").textContent = currentMatrix.name || "LED Matrix";
+  document.getElementById("display-matrix-res").textContent = `${currentMatrix.cols}×${currentMatrix.rows}`;
+
+  // Fetch initial matrix canvas state
+  try {
+    const res = await fetch("/api/matrix/session", {
+      headers: { "Authorization": `Bearer ${sessionToken}` }
+    });
+    const data = await res.json();
+    if (data.ok && Array.isArray(data.canvas)) {
+      matrixCanvas = data.canvas;
+    } else {
+      matrixCanvas = Array.from({ length: currentMatrix.ledCount || (currentMatrix.cols * currentMatrix.rows) }, () => [0, 0, 0]);
+    }
+  } catch {
+    matrixCanvas = Array.from({ length: currentMatrix.ledCount || (currentMatrix.cols * currentMatrix.rows) }, () => [0, 0, 0]);
+  }
+
+  setupMatrixCanvas();
+  renderCanvas();
+  startSseStream();
+  showToast(`Connected to ${currentMatrix.name} ✓`);
+}
+
+// ── Matrix Canvas Setup & Responsive Sizing ───────────────────────────────────
+function setupMatrixCanvas() {
+  if (!currentMatrix) return;
+  const cols = currentMatrix.cols || 16;
+  const rows = currentMatrix.rows || 16;
+
+  const vp = document.getElementById("viewport");
+  const maxW = vp.clientWidth - 24;
+  const maxH = vp.clientHeight - 24;
+
+  const cellW = Math.floor(maxW / cols);
+  const cellH = Math.floor(maxH / rows);
+  const cellSize = Math.max(8, Math.min(cellW, cellH, 36));
+
+  const totalW = cols * cellSize;
+  const totalH = rows * cellSize;
+
+  // Sharp HiDPI rendering
+  const dpr = window.devicePixelRatio || 1;
+  canvasEl.width  = totalW * dpr;
+  canvasEl.height = totalH * dpr;
+  canvasEl.style.width  = `${totalW}px`;
+  canvasEl.style.height = `${totalH}px`;
+  ctx.scale(dpr, dpr);
+
+  canvasEl._cellSize = cellSize;
+  canvasEl._cols = cols;
+  canvasEl._rows = rows;
+}
+
+window.addEventListener("resize", () => {
+  if (currentMatrix && viewPainter.classList.contains("active")) {
+    setupMatrixCanvas();
+    renderCanvas();
+  }
+});
+
+// Convert (col, row) to linear index respecting serpentine
+function getCanvasIndex(col, row) {
+  if (!currentMatrix) return -1;
+  const cols = currentMatrix.cols || 16;
+  const rows = currentMatrix.rows || 16;
+  if (col < 0 || col >= cols || row < 0 || row >= rows) return -1;
+
+  if (currentMatrix.serpentine && (row % 2 === 1)) {
+    return row * cols + (cols - 1 - col);
+  }
+  return row * cols + col;
+}
+
+// ── Render LED Matrix onto Canvas ─────────────────────────────────────────────
+function renderCanvas() {
+  if (!currentMatrix || !canvasEl._cellSize) return;
+  const cols = canvasEl._cols;
+  const rows = canvasEl._rows;
+  const size = canvasEl._cellSize;
+  const gap = size > 16 ? 2 : 1;
+  const innerSize = Math.max(1, size - gap);
+
+  ctx.fillStyle = "#0c0c14";
+  ctx.fillRect(0, 0, cols * size, rows * size);
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const idx = getCanvasIndex(c, r);
+      const [red, green, blue] = matrixCanvas[idx] || [0, 0, 0];
+      const x = c * size + Math.floor(gap / 2);
+      const y = r * size + Math.floor(gap / 2);
+
+      const isLit = (red > 0 || green > 0 || blue > 0);
+      if (isLit) {
+        ctx.fillStyle = `rgb(${red}, ${green}, ${blue})`;
+      } else {
+        ctx.fillStyle = "#141420";
+      }
+
+      // Rounded rectangular LED pill
+      const radius = size > 18 ? 4 : 2;
+      ctx.beginPath();
+      ctx.roundRect(x, y, innerSize, innerSize, radius);
+      ctx.fill();
+
+      // Subtle inner LED specular highlight if lit
+      if (isLit && size > 14) {
+        ctx.fillStyle = `rgba(255, 255, 255, 0.28)`;
+        ctx.beginPath();
+        ctx.arc(x + innerSize * 0.35, y + innerSize * 0.35, innerSize * 0.18, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+}
+
+// ── Pointer Events & Zero-Latency Drawing Engine ──────────────────────────────
+canvasEl.addEventListener("pointerdown", onPointerStart, { passive: false });
+canvasEl.addEventListener("pointermove", onPointerMove,  { passive: false });
+window.addEventListener("pointerup",    onPointerEnd);
+window.addEventListener("pointercancel",onPointerEnd);
+
+function getPointerGridCoords(e) {
+  const rect = canvasEl.getBoundingClientRect();
+  const clientX = e.clientX;
+  const clientY = e.clientY;
+  const x = clientX - rect.left;
+  const y = clientY - rect.top;
+  const size = canvasEl._cellSize;
+  if (!size) return null;
+
+  const col = Math.floor(x / size);
+  const row = Math.floor(y / size);
+  if (col < 0 || col >= canvasEl._cols || row < 0 || row >= canvasEl._rows) return null;
+  return { col, row };
+}
+
+function onPointerStart(e) {
+  e.preventDefault();
+  canvasEl.setPointerCapture(e.pointerId);
+  isDrawing = true;
+
+  // Push undo state
+  saveUndoState();
+
+  const coords = getPointerGridCoords(e);
+  if (!coords) return;
+
+  if (activeTool === "picker") {
+    samplePixelColor(coords.col, coords.row);
+    setTool("brush");
+    return;
+  }
+
+  if (activeTool === "fill") {
+    floodFill(coords.col, coords.row);
+    flushDeltasImmediately();
+    return;
+  }
+
+  applyPixelChange(coords.col, coords.row);
+  lastDrawCoords = coords;
+}
+
+function onPointerMove(e) {
+  if (!isDrawing || !lastDrawCoords) return;
+  e.preventDefault();
+
+  const coords = getPointerGridCoords(e);
+  if (!coords) return;
+
+  if (coords.col === lastDrawCoords.col && coords.row === lastDrawCoords.row) return;
+
+  // Bresenham line interpolation between consecutive pointer movements
+  // Ensures fast finger drags never leave gaps on touchscreen!
+  interpolateLine(lastDrawCoords.col, lastDrawCoords.row, coords.col, coords.row);
+  lastDrawCoords = coords;
+}
+
+function onPointerEnd(e) {
+  if (isDrawing) {
+    isDrawing = false;
+    lastDrawCoords = null;
+    flushDeltasImmediately();
+    addRecentColor(activeColor);
+  }
+}
+
+function interpolateLine(x0, y0, x1, y1) {
+  const dx = Math.abs(x1 - x0);
+  const dy = Math.abs(y1 - y0);
+  const sx = (x0 < x1) ? 1 : -1;
+  const sy = (y0 < y1) ? 1 : -1;
+  let err = dx - dy;
+
+  let curX = x0;
+  let curY = y0;
+
+  while (true) {
+    applyPixelChange(curX, curY);
+    if (curX === x1 && curY === y1) break;
+    const e2 = 2 * err;
+    if (e2 > -dy) { err -= dy; curX += sx; }
+    if (e2 < dx)  { err += dx; curY += sy; }
+  }
+}
+
+function applyPixelChange(col, row) {
+  const idx = getCanvasIndex(col, row);
+  if (idx < 0 || idx >= matrixCanvas.length) return;
+
+  let colorToPaint = [...activeColor];
+  if (activeTool === "eraser") colorToPaint = [0, 0, 0];
+
+  const current = matrixCanvas[idx];
+  if (current && current[0] === colorToPaint[0] && current[1] === colorToPaint[1] && current[2] === colorToPaint[2]) {
+    return; // Already this color
+  }
+
+  matrixCanvas[idx] = colorToPaint;
+  pendingDeltas.push({ col, row, r: colorToPaint[0], g: colorToPaint[1], b: colorToPaint[2] });
+
+  // Optimistic single-pixel canvas redraw (< 1ms)
+  drawSingleCell(col, row, colorToPaint);
+
+  // Debounced queue flush (30ms)
+  scheduleDeltaFlush();
+}
+
+function drawSingleCell(col, row, rgb) {
+  const size = canvasEl._cellSize;
+  const gap = size > 16 ? 2 : 1;
+  const innerSize = Math.max(1, size - gap);
+  const x = col * size + Math.floor(gap / 2);
+  const y = row * size + Math.floor(gap / 2);
+
+  const isLit = (rgb[0] > 0 || rgb[1] > 0 || rgb[2] > 0);
+  ctx.fillStyle = isLit ? `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})` : "#141420";
+  const radius = size > 18 ? 4 : 2;
+  ctx.beginPath();
+  ctx.roundRect(x, y, innerSize, innerSize, radius);
+  ctx.fill();
+
+  if (isLit && size > 14) {
+    ctx.fillStyle = `rgba(255, 255, 255, 0.28)`;
+    ctx.beginPath();
+    ctx.arc(x + innerSize * 0.35, y + innerSize * 0.35, innerSize * 0.18, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+// Flood Fill (Bucket Tool)
+function floodFill(startCol, startRow) {
+  const startIdx = getCanvasIndex(startCol, startRow);
+  if (startIdx < 0) return;
+  const targetRgb = [...matrixCanvas[startIdx]];
+  const fillRgb = (activeTool === "eraser") ? [0, 0, 0] : [...activeColor];
+
+  if (targetRgb[0] === fillRgb[0] && targetRgb[1] === fillRgb[1] && targetRgb[2] === fillRgb[2]) return;
+
+  const cols = currentMatrix.cols;
+  const rows = currentMatrix.rows;
+  const queue = [[startCol, startRow]];
+  const visited = new Uint8Array(cols * rows);
+
+  while (queue.length > 0) {
+    const [c, r] = queue.pop();
+    if (c < 0 || c >= cols || r < 0 || r >= rows) continue;
+    const pos = r * cols + c;
+    if (visited[pos]) continue;
+    visited[pos] = 1;
+
+    const idx = getCanvasIndex(c, r);
+    const px = matrixCanvas[idx];
+    if (px[0] === targetRgb[0] && px[1] === targetRgb[1] && px[2] === targetRgb[2]) {
+      matrixCanvas[idx] = fillRgb;
+      pendingDeltas.push({ col: c, row: r, r: fillRgb[0], g: fillRgb[1], b: fillRgb[2] });
+
+      queue.push([c + 1, r], [c - 1, r], [c, r + 1], [c, r - 1]);
+    }
+  }
+
+  renderCanvas();
+  hapticPulse(25);
+}
+
+// Eyedropper / Color Picker Tool
+function samplePixelColor(col, row) {
+  const idx = getCanvasIndex(col, row);
+  if (idx >= 0 && matrixCanvas[idx]) {
+    const rgb = matrixCanvas[idx];
+    updateActiveColor(rgb);
+    showToast(`Picked ${rgbToHex(rgb)}`);
+    hapticPulse(20);
+  }
+}
+
+// ── Undo History ─────────────────────────────────────────────────────────────
+function saveUndoState() {
+  if (matrixCanvas.length === 0) return;
+  if (undoStack.length >= 15) undoStack.shift();
+  undoStack.push(matrixCanvas.map(rgb => [...rgb]));
+}
+
+async function undoAction() {
+  if (undoStack.length === 0) {
+    showToast("Nothing to undo");
+    return;
+  }
+  const prev = undoStack.pop();
+  matrixCanvas = prev;
+  renderCanvas();
+  hapticPulse(20);
+  showToast("Undo ✓");
+
+  // Send full pixel snapshot to controller
+  try {
+    await fetch("/api/matrix/send", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${sessionToken}`
+      },
+      body: JSON.stringify({ pixels: matrixCanvas })
+    });
+  } catch {}
+}
+
+// ── Network Batch Dispatcher ─────────────────────────────────────────────────
+function scheduleDeltaFlush() {
+  if (sendTimer) return;
+  sendTimer = setTimeout(flushDeltasImmediately, 33); // ~30 fps
+}
+
+async function flushDeltasImmediately() {
+  if (sendTimer) {
+    clearTimeout(sendTimer);
+    sendTimer = null;
+  }
+  if (pendingDeltas.length === 0 || !sessionToken) return;
+
+  const toSend = [...pendingDeltas];
+  pendingDeltas = [];
+
+  try {
+    await fetch("/api/matrix/send", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${sessionToken}`
+      },
+      body: JSON.stringify({ deltas: toSend })
+    });
+  } catch (err) {
+    console.warn("Error sending deltas:", err);
+  }
+}
+
+// ── Clear Matrix & Hardware Sync ─────────────────────────────────────────────
+async function confirmClearMatrix() {
+  if (!confirm(`Clear all pixels on ${currentMatrix.name}?`)) return;
+  saveUndoState();
+
+  const count = currentMatrix.ledCount || (currentMatrix.cols * currentMatrix.rows);
+  matrixCanvas = Array.from({ length: count }, () => [0, 0, 0]);
+  renderCanvas();
+  hapticPulse(30);
+
+  try {
+    await fetch("/api/matrix/clear", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${sessionToken}`
+      },
+      body: JSON.stringify({ releaseLive: true })
+    });
+    showToast("Matrix cleared ✓");
+  } catch (e) {
+    showToast("Could not clear matrix");
+  }
+}
+
+async function syncMatrixFromDevice() {
+  showToast("Syncing from matrix…");
+  try {
+    const res = await fetch("/api/matrix/sync", {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${sessionToken}` }
+    });
+    const data = await res.json();
+    if (data.ok && Array.isArray(data.canvas)) {
+      matrixCanvas = data.canvas;
+      renderCanvas();
+      showToast("Synced with physical LEDs ✓");
+      hapticPulse(25);
+    } else {
+      showToast(data.error || "Could not sync liveview");
+    }
+  } catch (err) {
+    showToast("Sync error: " + err.message);
+  }
+}
+
+// ── Tool Selection ────────────────────────────────────────────────────────────
+function setTool(tool) {
+  activeTool = tool;
+  document.querySelectorAll(".tool-item-btn").forEach(btn => btn.classList.remove("active"));
+  const btn = document.getElementById(`tool-${tool}`);
+  if (btn) btn.classList.add("active");
+  hapticPulse(15);
+}
+
+// ── Hardware Brightness Control ───────────────────────────────────────────────
+let briDebounce = null;
+function toggleBrightnessDrawer() {
+  const d = document.getElementById("brightness-drawer");
+  d.style.display = (d.style.display === "none") ? "block" : "none";
+}
+
+function onBrightnessInput(val) {
+  document.getElementById("bri-val-label").textContent = val;
+  clearTimeout(briDebounce);
+  briDebounce = setTimeout(async () => {
+    try {
+      await fetch("/api/matrix/send", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${sessionToken}`
+        },
+        body: JSON.stringify({ brightness: parseInt(val, 10) })
+      });
+    } catch {}
+  }, 100);
+}
+
+// ── Real-time SSE Stream (Multiplayer Matrix Sync) ────────────────────────────
+function startSseStream() {
+  if (sseConnection) {
+    try { sseConnection.close(); } catch {}
+  }
+
+  sseConnection = new EventSource("/api/events");
+
+  sseConnection.addEventListener("delta", (e) => {
+    try {
+      const changes = JSON.parse(e.data);
+      if (!Array.isArray(changes) || !currentMatrix) return;
+      let needsRedraw = false;
+
+      for (const item of changes) {
+        if (item.instanceId === currentMatrix.id && item.ledIndex !== undefined) {
+          const rgb = [item.r, item.g, item.b];
+          matrixCanvas[item.ledIndex] = rgb;
+          needsRedraw = true;
+        }
+      }
+      if (needsRedraw) renderCanvas();
+    } catch {}
+  });
+
+  sseConnection.addEventListener("matrix_delta", (e) => {
+    try {
+      const data = JSON.parse(e.data);
+      if (data.instanceId === currentMatrix?.id && Array.isArray(data.changes)) {
+        for (const item of data.changes) {
+          matrixCanvas[item.ledIndex] = [item.r, item.g, item.b];
+        }
+        renderCanvas();
+      }
+    } catch {}
+  });
+
+  sseConnection.addEventListener("matrix_clear", (e) => {
+    try {
+      const data = JSON.parse(e.data);
+      if (data.instanceId === currentMatrix?.id) {
+        const count = currentMatrix.ledCount || (currentMatrix.cols * currentMatrix.rows);
+        matrixCanvas = Array.from({ length: count }, () => [0, 0, 0]);
+        renderCanvas();
+      }
+    } catch {}
+  });
+
+  sseConnection.addEventListener("matrix_sync", (e) => {
+    try {
+      const data = JSON.parse(e.data);
+      if (data.instanceId === currentMatrix?.id && Array.isArray(data.canvas)) {
+        matrixCanvas = data.canvas;
+        renderCanvas();
+      }
+    } catch {}
+  });
+
+  sseConnection.addEventListener("gallery_updated", () => {
+    if (document.getElementById("modal-gallery").classList.contains("open")) {
+      loadGalleryArtworks();
+    }
+  });
+
+  sseConnection.addEventListener("slideshow_tick", (e) => {
+    try {
+      const data = JSON.parse(e.data);
+      if (data.artwork?.title) {
+        showToast(`Art Frame: "${data.artwork.title}"`);
+      }
+    } catch {}
+  });
+
+  sseConnection.onerror = () => {
+    // EventSource handles reconnection automatically
+  };
+}
+
+// ── Full Color Picker Modal & 2D Canvas ────────────────────────────────────────
+const modalColorPicker = document.getElementById("modal-color-picker");
+const spectrumCanvas   = document.getElementById("spectrum-canvas");
+const spectrumCtx      = spectrumCanvas.getContext("2d");
+const spectrumCursor   = document.getElementById("spectrum-cursor");
+const spectrumWrap     = document.getElementById("spectrum-wrap");
+
+function openColorPickerModal() {
+  modalColorPicker.classList.add("open");
+  hapticPulse(15);
+  setTimeout(drawSpectrum, 20);
+}
+
+function closeColorPickerModal() {
+  modalColorPicker.classList.remove("open");
+}
+
+function onModalBackdropClick(e) {
+  if (e.target === modalColorPicker) closeColorPickerModal();
+  if (e.target === document.getElementById("modal-save-art")) closeSaveArtModal();
+  if (e.target === document.getElementById("modal-gallery")) closeGalleryModal();
+}
+
+function drawSpectrum() {
+  const w = spectrumWrap.clientWidth;
+  const h = spectrumWrap.clientHeight;
+  spectrumCanvas.width = w;
+  spectrumCanvas.height = h;
+
+  // Base hue color
+  const baseColor = `hsl(${currentHue}, 100%, 50%)`;
+  spectrumCtx.fillStyle = baseColor;
+  spectrumCtx.fillRect(0, 0, w, h);
+
+  // Horizontal gradient: white to transparent
+  const gradWhite = spectrumCtx.createLinearGradient(0, 0, w, 0);
+  gradWhite.addColorStop(0, "rgba(255,255,255,1)");
+  gradWhite.addColorStop(1, "rgba(255,255,255,0)");
+  spectrumCtx.fillStyle = gradWhite;
+  spectrumCtx.fillRect(0, 0, w, h);
+
+  // Vertical gradient: transparent to black
+  const gradBlack = spectrumCtx.createLinearGradient(0, 0, 0, h);
+  gradBlack.addColorStop(0, "rgba(0,0,0,0)");
+  gradBlack.addColorStop(1, "rgba(0,0,0,1)");
+  spectrumCtx.fillStyle = gradBlack;
+  spectrumCtx.fillRect(0, 0, w, h);
+
+  // Position cursor
+  spectrumCursor.style.left = `${currentSat * 100}%`;
+  spectrumCursor.style.top  = `${(1 - currentVal) * 100}%`;
+}
+
+function onHueSliderInput(val) {
+  currentHue = parseInt(val, 10);
+  document.getElementById("hue-label").textContent = `${currentHue}°`;
+  drawSpectrum();
+  const rgb = hsvToRgb(currentHue, currentSat, currentVal);
+  updateActiveColor(rgb);
+}
+
+function onNativeColorChange(hex) {
+  const rgb = hexToRgb(hex);
+  updateActiveColor(rgb);
+}
+
+// 2D Spectrum Touch / Drag Handler
+let isSpectrumDragging = false;
+
+spectrumWrap.addEventListener("pointerdown", (e) => {
+  isSpectrumDragging = true;
+  spectrumWrap.setPointerCapture(e.pointerId);
+  pickSpectrumCoords(e);
+});
+spectrumWrap.addEventListener("pointermove", (e) => {
+  if (isSpectrumDragging) pickSpectrumCoords(e);
+});
+window.addEventListener("pointerup", () => { isSpectrumDragging = false; });
+
+function pickSpectrumCoords(e) {
+  const rect = spectrumWrap.getBoundingClientRect();
+  const x = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
+  const y = Math.max(0, Math.min(rect.height, e.clientY - rect.top));
+
+  currentSat = x / rect.width;
+  currentVal = 1 - (y / rect.height);
+
+  spectrumCursor.style.left = `${x}px`;
+  spectrumCursor.style.top  = `${y}px`;
+
+  const rgb = hsvToRgb(currentHue, currentSat, currentVal);
+  updateActiveColor(rgb);
+}
+
+// ── Creation Gallery & Saved Artwork Functions ──────────────────────────────
+function openSaveArtModal() {
+  const modal = document.getElementById("modal-save-art");
+  modal.classList.add("open");
+  hapticPulse(15);
+  drawSaveArtPreview();
+  const inputTitle = document.getElementById("save-art-title");
+  inputTitle.value = "";
+  const savedAuthor = localStorage.getItem("wled_artist_name");
+  if (savedAuthor) document.getElementById("save-art-author").value = savedAuthor;
+  setTimeout(() => inputTitle.focus(), 50);
+}
+
+function closeSaveArtModal() {
+  document.getElementById("modal-save-art").classList.remove("open");
+}
+
+function drawSaveArtPreview() {
+  const cvs = document.getElementById("save-art-preview");
+  const pCtx = cvs.getContext("2d");
+  const cols = currentMatrix?.cols || 16;
+  const rows = currentMatrix?.rows || 16;
+  const w = cvs.width;
+  const h = cvs.height;
+  pCtx.fillStyle = "#0c0c14";
+  pCtx.fillRect(0, 0, w, h);
+
+  const cellW = w / cols;
+  const cellH = h / rows;
+  const gap = 1;
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const idx = getCanvasIndex(c, r);
+      const [red, green, blue] = matrixCanvas[idx] || [0, 0, 0];
+      if (red > 0 || green > 0 || blue > 0) {
+        pCtx.fillStyle = `rgb(${red}, ${green}, ${blue})`;
+      } else {
+        pCtx.fillStyle = "#141420";
+      }
+      pCtx.fillRect(c * cellW + gap, r * cellH + gap, cellW - gap * 2, cellH - gap * 2);
+    }
+  }
+}
+
+async function submitSaveArtwork() {
+  const btn = document.getElementById("btn-submit-save-art");
+  const titleInput = document.getElementById("save-art-title");
+  const authorInput = document.getElementById("save-art-author");
+
+  const title = titleInput.value.trim() || `Creation #${Date.now().toString().slice(-4)}`;
+  const author = authorInput.value.trim() || "Guest Artist";
+  localStorage.setItem("wled_artist_name", author);
+
+  btn.disabled = true;
+  btn.textContent = "Saving…";
+
+  // Build sequential 2D array of pixels for saving
+  const cols = currentMatrix?.cols || 16;
+  const rows = currentMatrix?.rows || 16;
+  const exportPixels = [];
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const idx = getCanvasIndex(c, r);
+      exportPixels.push([...(matrixCanvas[idx] || [0, 0, 0])]);
+    }
+  }
+
+  try {
+    const res = await fetch("/api/gallery", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${sessionToken}`
+      },
+      body: JSON.stringify({
+        title,
+        author,
+        pixels: exportPixels,
+        cols,
+        rows
+      })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      hapticPulse(30);
+      closeSaveArtModal();
+      showToast(`Saved "${title}" to Gallery ✓`);
+    } else {
+      showToast(data.error || "Save failed");
+    }
+  } catch (err) {
+    showToast("Network error saving art");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Save to Gallery ✓";
+  }
+}
+
+async function openGalleryModal() {
+  const modal = document.getElementById("modal-gallery");
+  modal.classList.add("open");
+  hapticPulse(15);
+  await loadGalleryArtworks();
+}
+
+function closeGalleryModal() {
+  document.getElementById("modal-gallery").classList.remove("open");
+}
+
+async function loadGalleryArtworks() {
+  const list = document.getElementById("gallery-list");
+  list.innerHTML = `<div style="text-align:center; padding:30px; color:var(--muted); font-size:0.85rem;">Loading gallery…</div>`;
+
+  try {
+    const res = await fetch("/api/gallery");
+    const data = await res.json();
+    if (data.ok && Array.isArray(data.gallery)) {
+      document.getElementById("gallery-count-badge").textContent = data.gallery.length;
+      renderGalleryCards(data.gallery);
+    } else {
+      list.innerHTML = `<div style="text-align:center; padding:30px; color:var(--muted);">No artworks found.</div>`;
+    }
+  } catch (err) {
+    list.innerHTML = `<div style="text-align:center; padding:30px; color:var(--error);">Failed to load gallery.</div>`;
+  }
+}
+
+function escapeHtml(str) {
+  return String(str || "").replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+}
+
+function formatDate(isoStr) {
+  if (!isoStr) return "";
+  try {
+    const d = new Date(isoStr);
+    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  } catch {
+    return "";
+  }
+}
+
+function renderGalleryCards(items) {
+  const list = document.getElementById("gallery-list");
+  if (items.length === 0) {
+    list.innerHTML = `
+      <div style="text-align:center; padding:40px 20px; color:var(--muted);">
+        <div style="font-size:2rem; margin-bottom:8px;">🎨</div>
+        <div style="font-weight:600; color:var(--text); margin-bottom:4px;">No Saved Art Yet</div>
+        <div style="font-size:0.8rem;">Paint something on the matrix and tap Save to build your gallery!</div>
+      </div>
+    `;
+    return;
+  }
+
+  list.innerHTML = "";
+  items.forEach(art => {
+    const card = document.createElement("div");
+    card.className = "gallery-card";
+
+    const thumbWrap = document.createElement("div");
+    thumbWrap.className = "gallery-thumb-wrap";
+    const thumbCanvas = document.createElement("canvas");
+    thumbCanvas.className = "gallery-thumb-canvas";
+    thumbCanvas.width = 64;
+    thumbCanvas.height = 64;
+    thumbWrap.appendChild(thumbCanvas);
+
+    // Render micro preview
+    drawThumbnail(thumbCanvas, art.pixels, art.cols || 16, art.rows || 16);
+
+    const body = document.createElement("div");
+    body.className = "gallery-card-body";
+    body.innerHTML = `
+      <div class="gallery-card-top">
+        <span class="gallery-card-title">${escapeHtml(art.title)}</span>
+        <span class="gallery-res-badge">${art.cols || 16}×${art.rows || 16}</span>
+      </div>
+      <div class="gallery-card-meta">
+        <span>By ${escapeHtml(art.author || "Artist")}</span> · <span>${formatDate(art.createdAt)}</span>
+      </div>
+      <div class="gallery-card-actions">
+        <button class="gallery-btn action-apply" onclick="applyGalleryArtwork('${art.id}')" title="Project directly onto active LED matrix">
+          <span>⚡</span> Project
+        </button>
+        <button class="gallery-btn" onclick="downloadArtworkPng('${art.id}')" title="Export as high-res PNG">
+          <span>📥</span> PNG
+        </button>
+        <button class="gallery-btn" onclick="exportArtworkToWled('${art.id}')" title="Save to WLED hardware preset">
+          <span>💾</span> WLED
+        </button>
+        <button class="gallery-btn btn-del" onclick="deleteGalleryArtwork('${art.id}')" title="Delete">
+          <span>🗑</span>
+        </button>
+      </div>
+    `;
+
+    card.appendChild(thumbWrap);
+    card.appendChild(body);
+    list.appendChild(card);
+  });
+}
+
+function drawThumbnail(canvas, pixels, cols, rows) {
+  const pCtx = canvas.getContext("2d");
+  const w = canvas.width;
+  const h = canvas.height;
+  pCtx.fillStyle = "#0c0c14";
+  pCtx.fillRect(0, 0, w, h);
+
+  const cellW = w / cols;
+  const cellH = h / rows;
+  const gap = 1;
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const idx = r * cols + c;
+      const [red, green, blue] = pixels[idx] || [0, 0, 0];
+      if (red > 0 || green > 0 || blue > 0) {
+        pCtx.fillStyle = `rgb(${red}, ${green}, ${blue})`;
+      } else {
+        pCtx.fillStyle = "#141420";
+      }
+      pCtx.fillRect(c * cellW + gap, r * cellH + gap, cellW - gap * 2, cellH - gap * 2);
+    }
+  }
+}
+
+async function applyGalleryArtwork(id) {
+  hapticPulse(25);
+  showToast("Projecting to matrix…");
+  try {
+    const res = await fetch(`/api/gallery/${id}/apply`, {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${sessionToken}` }
+    });
+    const data = await res.json();
+    if (data.ok) {
+      // Re-fetch our session to update local matrix canvas immediately
+      const sessRes = await fetch("/api/matrix/session", {
+        headers: { "Authorization": `Bearer ${sessionToken}` }
+      });
+      const sessData = await sessRes.json();
+      if (sessData.ok && Array.isArray(sessData.canvas)) {
+        matrixCanvas = sessData.canvas;
+        renderCanvas();
+      }
+      closeGalleryModal();
+      showToast(`Projected "${data.title}" ✓`);
+      hapticPulse(30);
+    } else {
+      showToast(data.error || "Could not project artwork");
+    }
+  } catch (err) {
+    showToast("Error projecting artwork: " + err.message);
+  }
+}
+
+async function deleteGalleryArtwork(id) {
+  if (!confirm("Delete this creation from the gallery?")) return;
+  hapticPulse(20);
+  try {
+    const res = await fetch(`/api/gallery/${id}`, { method: "DELETE" });
+    const data = await res.json();
+    if (data.ok) {
+      showToast("Artwork removed ✓");
+      loadGalleryArtworks();
+    }
+  } catch (e) {
+    showToast("Error deleting artwork");
+  }
+}
+
+async function exportArtworkToWled(id) {
+  hapticPulse(20);
+  showToast("Saving to physical WLED preset…");
+  try {
+    const res = await fetch(`/api/gallery/${id}/export-preset`, {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${sessionToken}` }
+    });
+    const data = await res.json();
+    if (data.ok && data.savedToWled) {
+      showToast(`Saved to WLED Preset #${data.presetId} on controller ✓`);
+      hapticPulse(35);
+    } else {
+      showToast(data.error || "Could not save to WLED");
+    }
+  } catch (err) {
+    showToast("WLED export error: " + err.message);
+  }
+}
+
+function downloadArtworkPng(id) {
+  hapticPulse(15);
+  fetch("/api/gallery").then(r => r.json()).then(data => {
+    const art = data.gallery?.find(a => a.id === id);
+    if (!art) return;
+
+    // Create high-resolution upscaled export canvas (512x512)
+    const exportCanvas = document.createElement("canvas");
+    exportCanvas.width = 512;
+    exportCanvas.height = 512;
+    const eCtx = exportCanvas.getContext("2d");
+
+    const cols = art.cols || 16;
+    const rows = art.rows || 16;
+    const cellW = exportCanvas.width / cols;
+    const cellH = exportCanvas.height / rows;
+    const gap = 3;
+
+    eCtx.fillStyle = "#07070d";
+    eCtx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const idx = r * cols + c;
+        const [red, green, blue] = art.pixels[idx] || [0, 0, 0];
+        const isLit = (red > 0 || green > 0 || blue > 0);
+        eCtx.fillStyle = isLit ? `rgb(${red}, ${green}, ${blue})` : "#141420";
+        eCtx.beginPath();
+        eCtx.roundRect(c * cellW + gap, r * cellH + gap, cellW - gap * 2, cellH - gap * 2, 4);
+        eCtx.fill();
+      }
+    }
+
+    const a = document.createElement("a");
+    a.download = `${art.title.replace(/[^a-zA-Z0-9_-]/g, "_")}_16x16.png`;
+    a.href = exportCanvas.toDataURL("image/png");
+    a.click();
+    showToast(`Exported PNG ✓`);
+  });
+}
+
+// ── Quick Swatches Ribbon Builder ─────────────────────────────────────────────
+function buildQuickSwatches() {
+  quickSwatches.innerHTML = "";
+  QUICK_PALETTE.forEach(rgb => {
+    const btn = document.createElement("button");
+    const hex = rgbToHex(rgb);
+    btn.className = "swatch-btn";
+    btn.dataset.hex = hex;
+    btn.style.backgroundColor = `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+    if (rgb[0] === 0 && rgb[1] === 0 && rgb[2] === 0) {
+      btn.style.border = "2px dashed var(--border)";
+      btn.title = "Off / Black";
+    }
+
+    btn.onclick = () => {
+      hapticPulse(15);
+      updateActiveColor(rgb);
+      if (activeTool === "eraser") setTool("brush");
+    };
+    quickSwatches.appendChild(btn);
+  });
+}
+
+// ── Application Initialization ────────────────────────────────────────────────
+async function initApp() {
+  buildQuickSwatches();
+  updateActiveColor(activeColor);
+
+  // Check if session token exists in sessionStorage
+  const savedToken = sessionStorage.getItem("wled_matrix_token");
+  if (savedToken) {
+    try {
+      const res = await fetch("/api/matrix/session", {
+        headers: { "Authorization": `Bearer ${savedToken}` }
+      });
+      const data = await res.json();
+      if (data.ok && data.matrix) {
+        sessionToken = savedToken;
+        currentMatrix = data.matrix;
+        enterPainterView();
+        return;
+      }
+    } catch {}
+    sessionStorage.removeItem("wled_matrix_token");
+  }
+
+  // Otherwise, display the PIN Entry screen
+  viewPin.classList.remove("hidden");
+  updatePinDots();
+}
+
+initApp();
 </script>
 </body>
 </html>

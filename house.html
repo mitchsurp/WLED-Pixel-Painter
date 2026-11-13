@@ -1,0 +1,1853 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="theme-color" content="#0a0a12" />
+<title>House Pixel Painter</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg:          #08090f;
+    --surface:     #10121c;
+    --panel:       #171a28;
+    --border:      #262b40;
+    --accent:      #7b61ff;
+    --glow:        #7b61ff55;
+    --text:        #eef0f8;
+    --muted:       #747b96;
+    --success:     #4ecca3;
+    --error:       #ff6b6b;
+    --warn:        #ffd166;
+    --bottom-safe: max(12px, env(safe-area-inset-bottom));
+  }
+
+  *, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html, body {
+    height: 100%;
+    height: 100dvh;
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  body {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Header ────────────────────────────────────────────────────────────── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    z-index: 50;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 0.95rem;
+    letter-spacing: 0.03em;
+  }
+
+  .logo-icon {
+    font-size: 1.15rem;
+    line-height: 1;
+    filter: drop-shadow(0 0 8px var(--accent));
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* View switchers (Hidden by default unless allowViewSwitching === true) */
+  .view-switcher {
+    display: none;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 2px;
+    gap: 2px;
+  }
+
+  .view-btn {
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 5px 9px;
+    border-radius: 6px;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.15s;
+  }
+
+  .view-btn:hover { color: var(--text); }
+  .view-btn.active {
+    background: var(--accent);
+    color: #fff;
+    box-shadow: 0 0 10px var(--glow);
+  }
+
+  .status-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+    background: var(--panel);
+    padding: 5px 9px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+  }
+
+  .status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--muted);
+    transition: all 0.3s;
+  }
+  .status-dot.ok { background: var(--success); box-shadow: 0 0 8px var(--success); }
+  .status-dot.error { background: var(--error); box-shadow: 0 0 8px var(--error); }
+  .status-dot.busy { background: var(--warn); box-shadow: 0 0 8px var(--warn); }
+
+  .btn-clear {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--error);
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-clear:hover { background: #ff6b6b22; border-color: var(--error); }
+
+  /* ── Main Layout: Canvas + Toolbar ──────────────────────────────────────── */
+  main {
+    flex: 1;
+    display: flex;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Desktop sidebar */
+  aside.desktop-sidebar {
+    width: 270px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: none;
+    flex-direction: column;
+    overflow-y: auto;
+    z-index: 20;
+    flex-shrink: 0;
+  }
+
+  .sidebar-section {
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .sidebar-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+
+  /* Canvas stage */
+  .canvas-stage {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    background: radial-gradient(circle at 50% 30%, #15192c 0%, #08090f 75%);
+    overflow: hidden;
+    touch-action: none;
+  }
+
+  #house-svg-wrap {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    transform-origin: center center;
+    transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1);
+  }
+
+  svg#house-svg {
+    width: 100%;
+    height: 100%;
+    max-height: 100%;
+    touch-action: none;
+    cursor: crosshair;
+  }
+
+  /* Canvas Floating Zoom / Reset buttons */
+  .canvas-controls {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    display: flex;
+    gap: 6px;
+    z-index: 30;
+  }
+
+  .canvas-ctrl-btn {
+    background: #171a28cc;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    transition: all 0.15s;
+  }
+  .canvas-ctrl-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* Hover Element Banner */
+  #element-tooltip {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    background: #171a28cc;
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--border);
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--text);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+    z-index: 30;
+  }
+  #element-tooltip.visible { opacity: 1; }
+
+  /* ── Bottom Floating / Docked Toolbar (Mobile & Adaptive) ────────────────── */
+  .bottom-toolbar {
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding: 8px 12px var(--bottom-safe);
+    flex-shrink: 0;
+    z-index: 40;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    box-shadow: 0 -8px 24px rgba(0,0,0,0.4);
+  }
+
+  .tools-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .tool-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    height: 40px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    border-radius: 8px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.76rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .tool-btn:hover { color: var(--text); border-color: var(--muted); }
+  .tool-btn.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+    box-shadow: 0 0 12px var(--glow);
+  }
+  .tool-btn .icon { font-size: 1rem; }
+
+  /* Precision / Size Selector Pills */
+  .precision-pill-group {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+  }
+  .precision-btn {
+    padding: 4px 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem;
+    font-weight: 600;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .precision-btn.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+
+  /* Swatches Row */
+  .swatches-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+  }
+  .swatches-bar::-webkit-scrollbar { display: none; }
+
+  .swatch {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    border-radius: 8px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+    position: relative;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.15);
+  }
+  .swatch:active { transform: scale(0.92); }
+  .swatch.active {
+    border-color: #fff;
+    transform: scale(1.08);
+    box-shadow: 0 0 14px currentColor;
+  }
+
+  /* Custom Color Picker input */
+  .custom-color-btn {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    border-radius: 8px;
+    border: 2px dashed var(--border);
+    background: var(--panel);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+  }
+  .custom-color-btn input[type="color"] {
+    position: absolute;
+    width: 200%;
+    height: 200%;
+    opacity: 0;
+    cursor: pointer;
+    top: -50%;
+    left: -50%;
+  }
+
+  /* Brightness compact slider */
+  .bri-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0 8px;
+    height: 40px;
+    min-width: 100px;
+  }
+  .bri-pill span {
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+  .bri-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 70px;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    outline: none;
+  }
+  .bri-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+  }
+
+  /* ── SVG Elements Styling ────────────────────────────────────────────────── */
+  .led-bulb {
+    cursor: crosshair;
+    transition: fill 0.15s ease-out, filter 0.15s ease-out;
+  }
+
+  .led-glow {
+    pointer-events: none;
+    transition: opacity 0.2s ease-out, fill 0.2s ease-out;
+  }
+
+  /* Confirmation Dialog */
+  .modal-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(4px);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .modal-backdrop.open { display: flex; }
+  .modal-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    max-width: 340px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+  }
+  .modal-box h3 { font-size: 1.1rem; margin-bottom: 8px; }
+  .modal-box p { font-size: 0.85rem; color: var(--muted); margin-bottom: 20px; }
+  .modal-actions { display: flex; gap: 8px; }
+  .modal-actions button {
+    flex: 1;
+    padding: 10px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    border: none;
+  }
+  .modal-btn-cancel { background: var(--panel); color: var(--text); border: 1px solid var(--border); }
+  .modal-btn-confirm { background: var(--error); color: #fff; }
+
+  /* Toast message */
+  #toast {
+    position: fixed;
+    bottom: 90px;
+    left: 50%;
+    transform: translateX(-50%) translateY(30px);
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 100;
+  }
+  #toast.show {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+
+  /* Presets & WLED Controls */
+  .btn-preset {
+    background: linear-gradient(135deg, rgba(142, 68, 173, 0.4), rgba(41, 128, 185, 0.4));
+    border: 1px solid rgba(155, 89, 182, 0.6);
+    color: #fff;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .btn-preset:hover {
+    background: linear-gradient(135deg, rgba(142, 68, 173, 0.7), rgba(41, 128, 185, 0.7));
+    border-color: #bb86fc;
+    transform: translateY(-1px);
+  }
+  .action-btn-wled {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 9px 12px;
+    border-radius: 8px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.15s;
+    width: 100%;
+    text-align: left;
+  }
+  .action-btn-wled:hover {
+    border-color: var(--accent);
+    background: rgba(187, 134, 252, 0.08);
+  }
+  .action-btn-wled.primary {
+    background: linear-gradient(135deg, rgba(155, 89, 182, 0.25), rgba(52, 152, 219, 0.25));
+    border-color: rgba(155, 89, 182, 0.5);
+    color: #fff;
+  }
+  .action-btn-wled.primary:hover {
+    background: linear-gradient(135deg, rgba(155, 89, 182, 0.4), rgba(52, 152, 219, 0.4));
+    border-color: #bb86fc;
+  }
+  .loading-spin {
+    width: 22px;
+    height: 22px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: inline-block;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Responsive desktop sidebar */
+  @media (min-width: 900px) {
+    aside.desktop-sidebar {
+      display: flex;
+    }
+    .bottom-toolbar {
+      display: none;
+    }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <span class="logo-icon">🏡</span>
+    <span>House Painter</span>
+  </div>
+
+  <div class="header-actions">
+    <div class="view-switcher" id="header-view-switcher">
+      <a href="/house" class="view-btn active" title="House Real-Space View">🏠 House</a>
+      <a href="/desktop" class="view-btn" title="2D Matrix Grid">⊞ Matrix</a>
+      <a href="/tablet" class="view-btn" title="Touch Tablet Grid">📱 Touch</a>
+    </div>
+
+    <div class="status-pill">
+      <div class="status-dot ok" id="status-dot"></div>
+      <span id="user-count">👤 1</span>
+    </div>
+
+    <button class="btn-preset" onclick="syncWithLights()" title="Query current LED colors from WLED controllers" style="background:var(--panel); border:1px solid var(--border); font-size:0.75rem; padding:6px 10px;">⟳ Sync</button>
+    <button class="btn-preset" onclick="openPresetsModal()" title="WLED Presets & Effects">✨ Presets</button>
+    <button class="btn-clear" onclick="openClearModal()">Clear</button>
+  </div>
+</header>
+
+<main>
+  <!-- ── Desktop Sidebar Layout ────────────────────────────────────────────── -->
+  <aside class="desktop-sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-title">🎨 Tools</div>
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
+        <button class="tool-btn active" data-tool="brush" onclick="setTool('brush')">
+          <span class="icon">🖌</span> Brush
+        </button>
+        <button class="tool-btn" data-tool="fill" onclick="setTool('fill')">
+          <span class="icon">🪄</span> Fill String
+        </button>
+        <button class="tool-btn" data-tool="rainbow" onclick="setTool('rainbow')">
+          <span class="icon">🌈</span> Rainbow
+        </button>
+        <button class="tool-btn" data-tool="eraser" onclick="setTool('eraser')">
+          <span class="icon">🧹</span> Eraser
+        </button>
+      </div>
+
+      <!-- Precision Granularity Toggles -->
+      <div style="margin-top:12px">
+        <div style="font-size:0.68rem; color:var(--muted); font-weight:700; margin-bottom:6px; letter-spacing:0.06em">PRECISION SIZE</div>
+        <div class="precision-pill-group">
+          <button class="precision-btn" id="desk-prec-single" onclick="setPrecisionMode('single')">🎯 1-LED</button>
+          <button class="precision-btn active" id="desk-prec-fine" onclick="setPrecisionMode('fine')">🖌 Fine</button>
+          <button class="precision-btn" id="desk-prec-wide" onclick="setPrecisionMode('wide')">🌊 Wide</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-title">✨ Palette</div>
+      <div style="display:grid; grid-template-columns: repeat(5, 1fr); gap:6px;" id="desktop-swatches">
+        <!-- Rendered by JS -->
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-title">💡 Brightness</div>
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+        <span style="font-size:0.75rem; color:var(--muted)">Master Brightness</span>
+        <span style="font-family:'JetBrains Mono',monospace; font-size:0.75rem; color:var(--accent)" id="desktop-bri-val">128</span>
+      </div>
+      <input type="range" class="bri-slider" id="desktop-bri-slider" min="0" max="255" value="128" style="width:100%"
+             oninput="onBrightnessChange(this.value)" />
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-title">⚡ WLED Controls</div>
+      <div style="display:flex; flex-direction:column; gap:6px;">
+        <button class="action-btn-wled primary" onclick="openPresetsModal()">
+          <span>✨</span> Apply Saved Preset…
+        </button>
+        <button class="action-btn-wled" onclick="syncWithLights()">
+          <span>⟳</span> Sync Canvas from Lights
+        </button>
+        <button class="action-btn-wled" onclick="releaseLiveMode()">
+          <span>🎮</span> Return to Regular WLED
+        </button>
+      </div>
+    </div>
+
+    <div class="sidebar-section" style="flex:1; overflow-y:auto;">
+      <div class="sidebar-title">🏠 Light Elements</div>
+      <div id="desktop-elements-list" style="display:flex; flex-direction:column; gap:4px; font-size:0.75rem; color:var(--muted);">
+        <!-- Elements list injected by JS -->
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── Canvas Stage ──────────────────────────────────────────────────────── -->
+  <section class="canvas-stage" id="canvas-stage">
+    <div class="canvas-controls">
+      <button class="canvas-ctrl-btn" onclick="toggleZoom()" id="btn-zoom">🔍 Zoom</button>
+      <button class="canvas-ctrl-btn" onclick="resetZoom()">⟲ Reset</button>
+    </div>
+
+    <div id="element-tooltip">Living Room Window · 40 LEDs</div>
+
+    <div id="house-svg-wrap">
+      <svg id="house-svg" viewBox="0 0 1000 700" xmlns="http://www.w3.org/2000/svg">
+        <!-- Rendered dynamically by JS -->
+      </svg>
+    </div>
+  </section>
+</main>
+
+<!-- ── Bottom Mobile / Tablet Toolbar ──────────────────────────────────────── -->
+<footer class="bottom-toolbar">
+  <div style="display:flex; align-items:center; justify-content:space-between; gap:6px">
+    <div class="precision-pill-group">
+      <button class="precision-btn" id="mob-prec-single" onclick="setPrecisionMode('single')">🎯 1-LED</button>
+      <button class="precision-btn active" id="mob-prec-fine" onclick="setPrecisionMode('fine')">🖌 Fine</button>
+      <button class="precision-btn" id="mob-prec-wide" onclick="setPrecisionMode('wide')">🌊 Wide</button>
+    </div>
+
+    <div class="bri-pill">
+      <span>💡</span>
+      <input type="range" class="bri-slider" id="mobile-bri-slider" min="0" max="255" value="128"
+             oninput="onBrightnessChange(this.value)" />
+    </div>
+  </div>
+
+  <div class="tools-row">
+    <button class="tool-btn active" data-tool="brush" onclick="setTool('brush')">
+      <span class="icon">🖌</span> Brush
+    </button>
+    <button class="tool-btn" data-tool="fill" onclick="setTool('fill')">
+      <span class="icon">🪄</span> Fill String
+    </button>
+    <button class="tool-btn" data-tool="rainbow" onclick="setTool('rainbow')">
+      <span class="icon">🌈</span> Rainbow
+    </button>
+    <button class="tool-btn" data-tool="eraser" onclick="setTool('eraser')">
+      <span class="icon">🧹</span> Eraser
+    </button>
+    <button class="tool-btn" onclick="openPresetsModal()">
+      <span class="icon">✨</span> Presets
+    </button>
+  </div>
+
+  <div class="swatches-bar" id="mobile-swatches">
+    <!-- Populated by JS -->
+  </div>
+</footer>
+
+<!-- ── Clear Modal ────────────────────────────────────────────────────────── -->
+<div class="modal-backdrop" id="clear-modal">
+  <div class="modal-box">
+    <h3>Turn Off / Clear Canvas</h3>
+    <p>Choose how you would like to clear the lights:</p>
+    <div style="display:flex; flex-direction:column; gap:8px; margin:16px 0;">
+      <button class="modal-btn-confirm" onclick="confirmClear(true)" style="background:#2ecc71; color:#000; border:none; padding:12px; font-size:0.85rem; font-weight:700; text-align:left; border-radius:6px; cursor:pointer;">
+        🎮 <b>Clear &amp; Return to WLED Controls</b><br/>
+        <span style="font-size:0.75rem; font-weight:400; opacity:0.9">Releases live UDP streaming so you can control lights from regular WLED app / effects.</span>
+      </button>
+      <button class="modal-btn-confirm" onclick="confirmClear(false)" style="background:#34495e; color:#fff; border:none; padding:12px; font-size:0.85rem; text-align:left; border-radius:6px; cursor:pointer;">
+        ⬛ <b>Turn Off Canvas (All Black)</b><br/>
+        <span style="font-size:0.75rem; opacity:0.85">Sets all pixels to black while keeping UDP painter connection active.</span>
+      </button>
+    </div>
+    <div class="modal-actions" style="justify-content:flex-end;">
+      <button class="modal-btn-cancel" onclick="closeClearModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Presets Modal ──────────────────────────────────────────────────────── -->
+<div class="modal-backdrop" id="presets-modal">
+  <div class="modal-box" style="max-width:540px; max-height:85vh; display:flex; flex-direction:column;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+      <h3 style="margin:0; display:flex; align-items:center; gap:8px;">
+        <span>✨</span> WLED Saved Presets
+      </h3>
+      <button class="modal-btn-cancel" onclick="closePresetsModal()" style="padding:4px 10px; font-size:0.8rem;">✕ Close</button>
+    </div>
+
+    <!-- Live UDP Status Banner & Direct Release Button -->
+    <div style="background:rgba(46, 204, 113, 0.12); border:1px solid rgba(46, 204, 113, 0.35); border-radius:8px; padding:10px 14px; margin-bottom:14px; display:flex; align-items:center; justify-content:space-between; gap:10px;">
+      <div>
+        <div style="font-weight:600; font-size:0.82rem; color:#2ecc71;">🎮 Regular WLED Controls</div>
+        <div style="font-size:0.72rem; color:var(--muted); margin-top:2px;">Stop live painter streaming and let WLED resume its regular effects/schedules.</div>
+      </div>
+      <button onclick="releaseLiveMode()" style="background:#2ecc71; border:none; color:#000; font-weight:700; padding:7px 12px; border-radius:6px; cursor:pointer; font-size:0.75rem; white-space:nowrap;">
+        Return to WLED
+      </button>
+    </div>
+
+    <!-- Presets List Container (Scrollable) -->
+    <div id="presets-list-wrap" style="flex:1; overflow-y:auto; min-height:160px; padding-right:4px;">
+      <div style="text-align:center; color:var(--muted); padding:30px 0;">
+        <div class="loading-spin" style="margin-bottom:8px;"></div>
+        <div>Loading presets from WLED…</div>
+      </div>
+    </div>
+
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:14px; border-top:1px solid var(--border); padding-top:10px;">
+      <button class="modal-btn-cancel" onclick="loadPresets()" style="font-size:0.75rem;">⟳ Refresh Presets</button>
+      <button class="modal-btn-cancel" onclick="closePresetsModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast">Lights updated ✓</div>
+
+<script>
+// ── Palette Configuration ────────────────────────────────────────────────────
+const PALETTE = [
+  { name: "Crimson Red",  rgb: [255, 0, 40],   hex: "#ff0028" },
+  { name: "Emerald Green",rgb: [0, 230, 70],   hex: "#00e646" },
+  { name: "Warm White",   rgb: [255, 235, 175],hex: "#ffebaf" },
+  { name: "Cool White",   rgb: [230, 245, 255],hex: "#e6f5ff" },
+  { name: "Gold",         rgb: [255, 185, 0],  hex: "#ffb900" },
+  { name: "Electric Blue",rgb: [0, 140, 255],  hex: "#008cff" },
+  { name: "Purple",       rgb: [155, 0, 255],  hex: "#9b00ff" },
+  { name: "Magenta Pink", rgb: [255, 0, 130],  hex: "#ff0082" },
+  { name: "Sunset Orange",rgb: [255, 85, 0],   hex: "#ff5500" },
+  { name: "Cyan",         rgb: [0, 240, 255],  hex: "#00f0ff" },
+];
+
+let activeColorRgb   = PALETTE[0].rgb;
+let activeTool       = "brush";   // "brush" | "fill" | "rainbow" | "eraser"
+let precisionMode    = "fine";    // "single" | "fine" | "wide"
+let rainbowHue       = 0;
+let currentZoom      = 1;
+let isZoomed         = false;
+
+// Config and state
+let appConfig        = null;
+let houseLayout      = null;
+let allLedNodes      = []; // Flat array of all physical LED points on the house
+let elementLedMap    = new Map(); // elementId -> array of node objects
+let canvasDevices    = new Map(); // instanceId -> Array<[r, g, b]>
+
+// Live touch drag state
+let isPointerDown    = false;
+let pointerDownPos   = null;
+let lastPointerPos   = null;
+let totalDragDist    = 0;
+let initialHitNode   = null;
+let pendingDeltas    = [];
+let flushTimer       = null;
+let evtSource        = null;
+
+// ── Precision Mode Switcher ──────────────────────────────────────────────────
+function setPrecisionMode(mode) {
+  precisionMode = mode;
+  ["single", "fine", "wide"].forEach(m => {
+    const dBtn = document.getElementById(`desk-prec-${m}`);
+    const mBtn = document.getElementById(`mob-prec-${m}`);
+    if (dBtn) dBtn.classList.toggle("active", m === mode);
+    if (mBtn) mBtn.classList.toggle("active", m === mode);
+  });
+}
+
+function getActiveHitRadius() {
+  if (precisionMode === "single") return 6;
+  if (precisionMode === "wide")   return 24;
+  return appConfig?.brushRadius || 10; // Fine mode defaults to 10px or admin setting
+}
+
+// ── Math Helpers for Window & Line LED Placement ─────────────────────────────
+function getWindowLedPositions(win) {
+  const { x, y, w, h, ledCount, startCorner = "bottom-left", direction = "clockwise", reverse = false } = win;
+  const N = ledCount;
+  if (!N || N <= 0) return [];
+
+  let corners;
+  if (direction === "clockwise") {
+    if (startCorner === "bottom-left")  corners = [{x, y: y + h}, {x, y}, {x: x + w, y}, {x: x + w, y: y + h}];
+    else if (startCorner === "top-left") corners = [{x, y}, {x: x + w, y}, {x: x + w, y: y + h}, {x, y: y + h}];
+    else if (startCorner === "top-right") corners = [{x: x + w, y}, {x: x + w, y: y + h}, {x, y: y + h}, {x, y}];
+    else corners = [{x: x + w, y: y + h}, {x, y: y + h}, {x, y}, {x: x + w, y}];
+  } else {
+    if (startCorner === "bottom-left")  corners = [{x, y: y + h}, {x: x + w, y: y + h}, {x: x + w, y}, {x, y}];
+    else if (startCorner === "bottom-right") corners = [{x: x + w, y: y + h}, {x, y: y + h}, {x, y}, {x: x + w, y}];
+    else if (startCorner === "top-right") corners = [{x: x + w, y}, {x, y}, {x: x + w, y: y + h}, {x: x + w, y: y + h}];
+    else corners = [{x, y}, {x: x + w, y: y + h}, {x: x + w, y}, {x, y}];
+  }
+
+  const segs = [
+    [corners[0], corners[1]],
+    [corners[1], corners[2]],
+    [corners[2], corners[3]],
+    [corners[3], corners[0]]
+  ];
+
+  const segLengths = segs.map(([p1, p2]) => Math.hypot(p2.x - p1.x, p2.y - p1.y));
+  const totalLength = segLengths.reduce((a, b) => a + b, 0);
+
+  const points = [];
+  for (let i = 0; i < N; i++) {
+    const targetDist = ((i + 0.5) / N) * totalLength;
+    let accumulated = 0;
+    let px = corners[0].x, py = corners[0].y;
+    for (let s = 0; s < segs.length; s++) {
+      const len = segLengths[s];
+      if (accumulated + len >= targetDist || s === segs.length - 1) {
+        const segDist = targetDist - accumulated;
+        const t = len > 0 ? Math.max(0, Math.min(1, segDist / len)) : 0;
+        px = segs[s][0].x + t * (segs[s][1].x - segs[s][0].x);
+        py = segs[s][0].y + t * (segs[s][1].y - segs[s][0].y);
+        break;
+      }
+      accumulated += len;
+    }
+    points.push({ pixelIdx: i, x: px, y: py });
+  }
+
+  if (reverse) points.reverse();
+  return points;
+}
+
+function getLineLedPositions(line) {
+  const { points, ledCount, reverse = false } = line;
+  const N = ledCount;
+  if (!N || N <= 0 || !points || points.length < 2) return [];
+
+  const segLengths = [];
+  for (let i = 0; i < points.length - 1; i++) {
+    segLengths.push(Math.hypot(points[i+1].x - points[i].x, points[i+1].y - points[i].y));
+  }
+  const totalLength = segLengths.reduce((a, b) => a + b, 0);
+
+  const result = [];
+  for (let i = 0; i < N; i++) {
+    const targetDist = N === 1 ? totalLength / 2 : (i / (N - 1)) * totalLength;
+    let accumulated = 0;
+    let px = points[0].x, py = points[0].y;
+    for (let s = 0; s < segLengths.length; s++) {
+      const len = segLengths[s];
+      if (accumulated + len >= targetDist || s === segLengths.length - 1) {
+        const segDist = targetDist - accumulated;
+        const t = len > 0 ? Math.max(0, Math.min(1, segDist / len)) : 0;
+        px = points[s].x + t * (points[s+1].x - points[s].x);
+        py = points[s].y + t * (points[s+1].y - points[s].y);
+        break;
+      }
+      accumulated += len;
+    }
+    result.push({ pixelIdx: i, x: px, y: py });
+  }
+
+  if (reverse) result.reverse();
+  return result;
+}
+
+function distToSegment(px, py, x0, y0, x1, y1) {
+  const dx = x1 - x0, dy = y1 - y0;
+  const lenSq = dx * dx + dy * dy;
+  if (lenSq === 0) return Math.hypot(px - x0, py - y0);
+  let t = ((px - x0) * dx + (py - y0) * dy) / lenSq;
+  t = Math.max(0, Math.min(1, t));
+  return Math.hypot(px - (x0 + t * dx), py - (y0 + t * dy));
+}
+
+// ── Render SVG House Scene ────────────────────────────────────────────────────
+function renderHouseScene(house) {
+  const svg = document.getElementById("house-svg");
+  if (!svg || !house) return;
+
+  const stories    = house.stories || 2;
+  const wallColor  = house.wallColor || "#1d2333";
+  const roofColor  = house.roofColor || "#121520";
+  const trimColor  = house.trimColor || "#475175";
+  const doorColor  = house.doorColor || "#932b44";
+
+  let wallY, wallH, peakY, eavesY;
+  if (stories === 1) {
+    wallY = 390; wallH = 180; peakY = 220; eavesY = 390;
+  } else if (stories === 3) {
+    wallY = 150; wallH = 420; peakY = 40;  eavesY = 150;
+  } else {
+    wallY = 250; wallH = 320; peakY = 75;  eavesY = 250;
+  }
+
+  let html = `
+    <defs>
+      <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#0a0c18"/>
+        <stop offset="60%" stop-color="#141829"/>
+        <stop offset="100%" stop-color="#1c2035"/>
+      </linearGradient>
+
+      <linearGradient id="roofGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="${roofColor}"/>
+        <stop offset="100%" stop-color="#0b0d14"/>
+      </linearGradient>
+
+      <linearGradient id="lawnGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#142618"/>
+        <stop offset="100%" stop-color="#09120b"/>
+      </linearGradient>
+
+      <linearGradient id="walkwayGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#2c3044"/>
+        <stop offset="100%" stop-color="#1b1d28"/>
+      </linearGradient>
+
+      <filter id="ledGlowFilter" x="-50%" y="-50%" width="200%" height="200%">
+        <feGaussianBlur stdDeviation="3.5" result="blur"/>
+        <feMerge>
+          <feMergeNode in="blur"/>
+          <feMergeNode in="SourceGraphic"/>
+        </feMerge>
+      </filter>
+    </defs>
+
+    <!-- Sky -->
+    <rect x="0" y="0" width="1000" height="700" fill="url(#skyGrad)"/>
+
+    <!-- Stars -->
+    <g fill="#ffffff" opacity="0.4">
+      <circle cx="80"  cy="60"  r="1"/>
+      <circle cx="210" cy="40"  r="1.2"/>
+      <circle cx="340" cy="80"  r="1"/>
+      <circle cx="680" cy="45"  r="1.5"/>
+      <circle cx="790" cy="90"  r="1"/>
+      <circle cx="910" cy="65"  r="1.2"/>
+      <circle cx="860" cy="30"  r="1"/>
+    </g>
+
+    <!-- Yard Lawn -->
+    <path d="M 0 570 Q 500 560 1000 570 L 1000 700 L 0 700 Z" fill="url(#lawnGrad)"/>
+
+    <!-- Walkway -->
+    <path d="M 465 570 Q 480 630 450 700 L 550 700 Q 520 630 535 570 Z" fill="url(#walkwayGrad)" opacity="0.8"/>
+
+    <!-- Trees -->
+    <g fill="#0e1b12" opacity="0.9">
+      <circle cx="70" cy="510" r="45"/>
+      <circle cx="100" cy="480" r="40"/>
+      <circle cx="130" cy="520" r="35"/>
+      <rect x="95" y="520" width="12" height="60" fill="#09100a"/>
+      <circle cx="920" cy="500" r="40"/>
+      <circle cx="950" cy="470" r="35"/>
+      <rect x="930" y="515" width="10" height="65" fill="#09100a"/>
+    </g>
+
+    <!-- House Body -->
+    <g id="house-architecture">
+      <rect x="180" y="${wallY}" width="640" height="${wallH}" fill="${wallColor}" rx="2"/>
+      <g stroke="rgba(255,255,255,0.03)" stroke-width="1">
+  `;
+
+  for (let y = wallY + 15; y < wallY + wallH; y += 18) {
+    html += `<line x1="180" y1="${y}" x2="820" y2="${y}" />`;
+  }
+
+  if (stories === 2) {
+    html += `<rect x="176" y="410" width="648" height="8" fill="${trimColor}" />`;
+  } else if (stories === 3) {
+    html += `<rect x="176" y="290" width="648" height="8" fill="${trimColor}" />`;
+    html += `<rect x="176" y="430" width="648" height="8" fill="${trimColor}" />`;
+  }
+
+  html += `
+      <rect x="176" y="${wallY}" width="10" height="${wallH}" fill="${trimColor}"/>
+      <rect x="814" y="${wallY}" width="10" height="${wallH}" fill="${trimColor}"/>
+      <rect x="170" y="565" width="660" height="8" fill="${trimColor}"/>
+    </g>
+
+    <!-- Roof -->
+    <polygon points="140,${eavesY} 500,${peakY} 860,${eavesY}" fill="url(#roofGrad)"/>
+    <polyline points="135,${eavesY + 4} 500,${peakY - 2} 865,${eavesY + 4}" stroke="${trimColor}" stroke-width="8" stroke-linecap="round" fill="none"/>
+    <line x1="135" y1="${eavesY + 4}" x2="865" y2="${eavesY + 4}" stroke="${trimColor}" stroke-width="6"/>
+
+    <!-- Front Door -->
+    <g id="house-door">
+      <rect x="455" y="555" width="90" height="15" fill="#32364a" rx="2"/>
+      <rect x="462" y="546" width="76" height="10" fill="#282c3c" rx="2"/>
+      <rect x="466" y="465" width="68" height="85" fill="${trimColor}" rx="3"/>
+      <rect x="471" y="470" width="58" height="78" fill="${doorColor}" rx="2"/>
+      <circle cx="522" cy="512" r="2.5" fill="#ffd166"/>
+      <circle cx="500" cy="452" r="5" fill="#fff4d4" filter="url(#ledGlowFilter)"/>
+    </g>
+  `;
+
+  // Windows Frames
+  html += `<g id="window-frames">`;
+  const elements = house.elements || [];
+  elements.filter(el => el.type === "window").forEach(win => {
+    html += `
+      <g class="window-pane" data-id="${win.id}">
+        <rect x="${win.x - 4}" y="${win.y - 4}" width="${win.w + 8}" height="${win.h + 8}" fill="${trimColor}" rx="4"/>
+        <rect x="${win.x - 7}" y="${win.y + win.h + 2}" width="${win.w + 14}" height="6" fill="${trimColor}" rx="2"/>
+        <rect x="${win.x}" y="${win.y}" width="${win.w}" height="${win.h}" fill="#161e30" rx="2"/>
+        <line x1="${win.x + win.w / 2}" y1="${win.y}" x2="${win.x + win.w / 2}" y2="${win.y + win.h}" stroke="${trimColor}" stroke-width="2.5"/>
+        <line x1="${win.x}" y1="${win.y + win.h / 2}" x2="${win.x + win.w}" y2="${win.y + win.h / 2}" stroke="${trimColor}" stroke-width="2.5"/>
+      </g>
+    `;
+  });
+  html += `</g>`;
+
+  // ── Render All LED Pixels ──
+  html += `<g id="led-pixels-layer">`;
+  allLedNodes = [];
+  elementLedMap.clear();
+
+  elements.forEach(el => {
+    const isWin = el.type === "window";
+    const pts = isWin ? getWindowLedPositions(el) : getLineLedPositions(el);
+    const nodeArray = [];
+
+    pts.forEach(p => {
+      const node = {
+        elementId:   el.id,
+        pixelIdx:    p.pixelIdx,
+        instanceId:  el.instanceId,
+        x:           p.x,
+        y:           p.y,
+        r: 0, g: 0, b: 0
+      };
+      allLedNodes.push(node);
+      nodeArray.push(node);
+
+      html += `
+        <g class="led-node" id="node-${el.id}-${p.pixelIdx}" data-element-id="${el.id}" data-pixel-idx="${p.pixelIdx}">
+          <circle cx="${p.x}" cy="${p.y}" r="8" fill="transparent" class="led-glow" opacity="0.45" filter="url(#ledGlowFilter)"/>
+          <circle cx="${p.x}" cy="${p.y}" r="4.2" fill="#282d42" stroke="rgba(255,255,255,0.3)" stroke-width="0.8" class="led-bulb"/>
+        </g>
+      `;
+    });
+
+    elementLedMap.set(el.id, nodeArray);
+  });
+  html += `</g>`;
+
+  svg.innerHTML = html;
+  applyCanvasStateToDom();
+  renderSidebarElementsList();
+}
+
+function updateDomNodeColor(elementId, pixelIdx, rgb) {
+  const group = document.getElementById(`node-${elementId}-${pixelIdx}`);
+  if (!group) return;
+
+  const glow = group.querySelector(".led-glow");
+  const bulb = group.querySelector(".led-bulb");
+  const isOff = rgb[0] === 0 && rgb[1] === 0 && rgb[2] === 0;
+
+  if (isOff) {
+    if (bulb) bulb.setAttribute("fill", "#282d42");
+    if (bulb) bulb.setAttribute("stroke", "rgba(255,255,255,0.3)");
+    if (glow) glow.setAttribute("fill", "transparent");
+  } else {
+    const rgbStr = `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+    if (bulb) bulb.setAttribute("fill", rgbStr);
+    if (bulb) bulb.setAttribute("stroke", "#ffffff");
+    if (glow) glow.setAttribute("fill", rgbStr);
+  }
+}
+
+function applyCanvasStateToDom() {
+  if (!houseLayout || !houseLayout.elements) return;
+
+  houseLayout.elements.forEach(el => {
+    const instCanvas = canvasDevices.get(el.instanceId);
+    if (!instCanvas) return;
+
+    for (let pIdx = 0; pIdx < el.ledCount; pIdx++) {
+      const physicalIdx = el.reverse
+        ? (el.startLed + el.ledCount - 1 - pIdx)
+        : (el.startLed + pIdx);
+
+      const rgb = instCanvas[physicalIdx] || [0, 0, 0];
+      updateDomNodeColor(el.id, pIdx, rgb);
+
+      const nodes = elementLedMap.get(el.id);
+      if (nodes && nodes[pIdx]) {
+        nodes[pIdx].r = rgb[0];
+        nodes[pIdx].g = rgb[1];
+        nodes[pIdx].b = rgb[2];
+      }
+    }
+  });
+}
+
+// ── Touch & Pointer Painting with Precision Single-Pixel Tap ─────────────────
+function findClosestLed(p, maxDistance = 32) {
+  let closest = null;
+  let minDist = maxDistance;
+  for (const node of allLedNodes) {
+    const d = Math.hypot(node.x - p.x, node.y - p.y);
+    if (d < minDist) {
+      minDist = d;
+      closest = node;
+    }
+  }
+  return closest;
+}
+
+function initPointerHandlers() {
+  const stage = document.getElementById("canvas-stage");
+  const svg   = document.getElementById("house-svg");
+
+  function getSvgPoint(e) {
+    const pt = svg.createSVGPoint();
+    pt.x = e.clientX;
+    pt.y = e.clientY;
+    return pt.matrixTransform(svg.getScreenCTM().inverse());
+  }
+
+  stage.addEventListener("pointerdown", e => {
+    e.preventDefault();
+    isPointerDown = true;
+    stage.setPointerCapture(e.pointerId);
+
+    const p = getSvgPoint(e);
+    pointerDownPos = p;
+    lastPointerPos = p;
+    totalDragDist  = 0;
+
+    if (activeTool === "fill") {
+      applyFillAtPoint(p);
+      return;
+    }
+
+    initialHitNode = findClosestLed(p, 30);
+    // In fine / single tap mode, light up the immediate single LED
+    if (initialHitNode && (precisionMode === "single" || appConfig?.singlePixelTap !== false)) {
+      paintSingleNode(initialHitNode);
+    } else {
+      applyBrushAtPoint(p, p);
+    }
+  });
+
+  stage.addEventListener("pointermove", e => {
+    if (!isPointerDown) {
+      const p = getSvgPoint(e);
+      showHoverTooltip(p);
+      return;
+    }
+
+    const p = getSvgPoint(e);
+    totalDragDist += Math.hypot(p.x - lastPointerPos.x, p.y - lastPointerPos.y);
+
+    if (activeTool !== "fill") {
+      // If user moved finger noticeably, perform continuous sweep
+      if (precisionMode === "single") {
+        const closest = findClosestLed(p, 20);
+        if (closest) paintSingleNode(closest);
+      } else {
+        applyBrushAtPoint(lastPointerPos, p);
+      }
+    }
+    lastPointerPos = p;
+  });
+
+  stage.addEventListener("pointerup", e => {
+    if (isPointerDown) {
+      stage.releasePointerCapture(e.pointerId);
+      isPointerDown = false;
+
+      // If user just tapped without dragging, ensure single LED tap
+      if (totalDragDist <= 6 && initialHitNode && activeTool !== "fill") {
+        paintSingleNode(initialHitNode);
+      }
+
+      pointerDownPos = null;
+      lastPointerPos = null;
+      initialHitNode = null;
+      flushChangesImmediately();
+    }
+  });
+
+  stage.addEventListener("pointercancel", () => {
+    isPointerDown = false;
+    pointerDownPos = null;
+    lastPointerPos = null;
+    initialHitNode = null;
+  });
+}
+
+function showHoverTooltip(p) {
+  const hitRadius = 24;
+  const tooltip = document.getElementById("element-tooltip");
+  const hitNode = findClosestLed(p, hitRadius);
+
+  if (hitNode && houseLayout?.elements) {
+    const el = houseLayout.elements.find(e => e.id === hitNode.elementId);
+    if (el) {
+      tooltip.textContent = `${el.name} · LED ${hitNode.pixelIdx + 1}/${el.ledCount}`;
+      tooltip.classList.add("visible");
+      return;
+    }
+  }
+  tooltip.classList.remove("visible");
+}
+
+function paintSingleNode(node) {
+  if (!node) return;
+  let colorToPaint = activeColorRgb;
+  if (activeTool === "eraser") {
+    colorToPaint = [0, 0, 0];
+  } else if (activeTool === "rainbow") {
+    colorToPaint = hslToRgb(rainbowHue, 1, 0.5);
+    rainbowHue = (rainbowHue + 8) % 360;
+  }
+
+  if (node.r !== colorToPaint[0] || node.g !== colorToPaint[1] || node.b !== colorToPaint[2]) {
+    node.r = colorToPaint[0];
+    node.g = colorToPaint[1];
+    node.b = colorToPaint[2];
+
+    updateDomNodeColor(node.elementId, node.pixelIdx, colorToPaint);
+    pendingDeltas.push({
+      elementId: node.elementId,
+      pixelIdx:  node.pixelIdx,
+      r: colorToPaint[0],
+      g: colorToPaint[1],
+      b: colorToPaint[2]
+    });
+    scheduleDeltaFlush();
+  }
+}
+
+function applyBrushAtPoint(p0, p1) {
+  const hitRadius = getActiveHitRadius();
+  let colorToPaint = activeColorRgb;
+
+  if (activeTool === "eraser") {
+    colorToPaint = [0, 0, 0];
+  } else if (activeTool === "rainbow") {
+    colorToPaint = hslToRgb(rainbowHue, 1, 0.5);
+    rainbowHue = (rainbowHue + 4) % 360;
+  }
+
+  for (const node of allLedNodes) {
+    const d = distToSegment(node.x, node.y, p0.x, p0.y, p1.x, p1.y);
+    if (d <= hitRadius) {
+      if (node.r !== colorToPaint[0] || node.g !== colorToPaint[1] || node.b !== colorToPaint[2]) {
+        node.r = colorToPaint[0];
+        node.g = colorToPaint[1];
+        node.b = colorToPaint[2];
+
+        updateDomNodeColor(node.elementId, node.pixelIdx, colorToPaint);
+        pendingDeltas.push({
+          elementId: node.elementId,
+          pixelIdx:  node.pixelIdx,
+          r: colorToPaint[0],
+          g: colorToPaint[1],
+          b: colorToPaint[2]
+        });
+      }
+    }
+  }
+
+  scheduleDeltaFlush();
+}
+
+function applyFillAtPoint(p) {
+  const hitNode = findClosestLed(p, 36);
+  if (!hitNode) return;
+
+  const colorToPaint = activeTool === "eraser" ? [0, 0, 0] : activeColorRgb;
+  const nodes = elementLedMap.get(hitNode.elementId) || [];
+
+  for (const node of nodes) {
+    node.r = colorToPaint[0];
+    node.g = colorToPaint[1];
+    node.b = colorToPaint[2];
+    updateDomNodeColor(node.elementId, node.pixelIdx, colorToPaint);
+    pendingDeltas.push({
+      elementId: node.elementId,
+      pixelIdx:  node.pixelIdx,
+      r: colorToPaint[0],
+      g: colorToPaint[1],
+      b: colorToPaint[2]
+    });
+  }
+
+  flushChangesImmediately();
+}
+
+// ── Debounced Delta Network Flush ─────────────────────────────────────────────
+function scheduleDeltaFlush() {
+  if (flushTimer) return;
+  flushTimer = setTimeout(() => {
+    flushTimer = null;
+    flushChangesImmediately();
+  }, 35);
+}
+
+async function flushChangesImmediately() {
+  if (pendingDeltas.length === 0) return;
+  const toSend = pendingDeltas;
+  pendingDeltas = [];
+
+  try {
+    const res = await fetch("/api/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ elementDeltas: toSend })
+    });
+    const data = await res.json();
+    if (!data.ok) {
+      console.warn("Send delta warning:", data.error);
+    }
+  } catch (err) {
+    console.warn("Network error during send:", err.message);
+  }
+}
+
+// ── Tool & Palette Management ─────────────────────────────────────────────────
+function setTool(toolName) {
+  activeTool = toolName;
+  document.querySelectorAll(".tool-btn").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.tool === toolName);
+  });
+}
+
+function setColor(rgb, hex) {
+  activeColorRgb = rgb;
+  if (activeTool === "eraser") setTool("brush");
+
+  document.querySelectorAll(".swatch").forEach(s => {
+    s.classList.toggle("active", s.dataset.hex === hex);
+  });
+}
+
+function renderPalettes() {
+  const desktopWrap = document.getElementById("desktop-swatches");
+  const mobileWrap  = document.getElementById("mobile-swatches");
+
+  let desktopHtml = "";
+  let mobileHtml  = "";
+
+  PALETTE.forEach((item, idx) => {
+    const isActive = idx === 0 ? "active" : "";
+    const swatchEl = `
+      <div class="swatch ${isActive}"
+           style="background:${item.hex}; color:${item.hex}"
+           data-hex="${item.hex}"
+           title="${item.name}"
+           onclick="setColor([${item.rgb.join(',')}], '${item.hex}')">
+      </div>
+    `;
+    desktopHtml += swatchEl;
+    mobileHtml  += swatchEl;
+  });
+
+  const customColorBtn = `
+    <div class="custom-color-btn" title="Custom Color">
+      <span style="font-size:0.9rem">🎨</span>
+      <input type="color" onchange="onCustomColorPick(this.value)" />
+    </div>
+  `;
+
+  desktopWrap.innerHTML = desktopHtml + customColorBtn;
+  mobileWrap.innerHTML  = mobileHtml  + customColorBtn;
+}
+
+function onCustomColorPick(hex) {
+  const rgb = hexToRgb(hex);
+  setColor(rgb, hex);
+}
+
+function hexToRgb(hex) {
+  const bigint = parseInt(hex.replace("#", ""), 16);
+  return [(bigint >> 16) & 255, (bigint >> 8) & 255, bigint & 255];
+}
+
+function hslToRgb(h, s, l) {
+  const c = (1 - Math.abs(2 * l - 1)) * s;
+  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+  const m = l - c / 2;
+  let r = 0, g = 0, b = 0;
+  if (h < 60) { r = c; g = x; }
+  else if (h < 120) { r = x; g = c; }
+  else if (h < 180) { g = c; b = x; }
+  else if (h < 240) { g = x; b = c; }
+  else if (h < 300) { r = x; b = c; }
+  else { r = c; b = x; }
+  return [Math.round((r + m) * 255), Math.round((g + m) * 255), Math.round((b + m) * 255)];
+}
+
+// ── Zoom & Pan Controls ───────────────────────────────────────────────────────
+function toggleZoom() {
+  const wrap = document.getElementById("house-svg-wrap");
+  const btn = document.getElementById("btn-zoom");
+  isZoomed = !isZoomed;
+  if (isZoomed) {
+    wrap.style.transform = "scale(1.8)";
+    btn.textContent = "🔍 Fit";
+  } else {
+    resetZoom();
+  }
+}
+
+function resetZoom() {
+  const wrap = document.getElementById("house-svg-wrap");
+  const btn = document.getElementById("btn-zoom");
+  wrap.style.transform = "scale(1)";
+  isZoomed = false;
+  btn.textContent = "🔍 Zoom";
+}
+
+// ── Sidebar Elements List ─────────────────────────────────────────────────────
+function renderSidebarElementsList() {
+  const container = document.getElementById("desktop-elements-list");
+  if (!container || !houseLayout?.elements) return;
+
+  let html = "";
+  houseLayout.elements.forEach(el => {
+    const isWin = el.type === "window";
+    const icon = isWin ? "🪟" : (el.category === "yard" ? "🌳" : "🏠");
+    html += `
+      <div style="display:flex; align-items:center; justify-content:space-between; padding:6px 8px; background:var(--panel); border:1px solid var(--border); border-radius:6px; cursor:pointer;"
+           onclick="fillSpecificElement('${el.id}')"
+           title="Click to fill this element with active color">
+        <span style="display:flex; align-items:center; gap:6px; color:var(--text); font-weight:500;">
+          <span>${icon}</span> ${el.name}
+        </span>
+        <span style="font-family:'JetBrains Mono',monospace; font-size:0.7rem; color:var(--muted)">${el.ledCount} LEDs</span>
+      </div>
+    `;
+  });
+  container.innerHTML = html;
+}
+
+function fillSpecificElement(elementId) {
+  const nodes = elementLedMap.get(elementId) || [];
+  const color = activeTool === "eraser" ? [0, 0, 0] : activeColorRgb;
+
+  for (const node of nodes) {
+    node.r = color[0];
+    node.g = color[1];
+    node.b = color[2];
+    updateDomNodeColor(node.elementId, node.pixelIdx, color);
+    pendingDeltas.push({ elementId: node.elementId, pixelIdx: node.pixelIdx, r: color[0], g: color[1], b: color[2] });
+  }
+  flushChangesImmediately();
+  toast("String filled ✓");
+}
+
+// ── Brightness Control ────────────────────────────────────────────────────────
+let briDebounce = null;
+function onBrightnessChange(val) {
+  val = parseInt(val);
+  document.getElementById("desktop-bri-val").textContent = val;
+  document.getElementById("desktop-bri-slider").value = val;
+  document.getElementById("mobile-bri-slider").value = val;
+
+  clearTimeout(briDebounce);
+  briDebounce = setTimeout(async () => {
+    try {
+      await fetch("/api/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ brightness: val, deltas: [] })
+      });
+    } catch {}
+  }, 100);
+}
+
+// ── Clear Strip Handling ──────────────────────────────────────────────────────
+function openClearModal() {
+  document.getElementById("clear-modal").classList.add("open");
+}
+function closeClearModal() {
+  document.getElementById("clear-modal").classList.remove("open");
+}
+
+async function confirmClear(releaseLive = true) {
+  closeClearModal();
+  try {
+    const res = await fetch("/api/clear", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ releaseLive })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      allLedNodes.forEach(node => {
+        node.r = 0; node.g = 0; node.b = 0;
+        updateDomNodeColor(node.elementId, node.pixelIdx, [0, 0, 0]);
+      });
+      toast(releaseLive ? "Returned to regular WLED controls ✓" : "Canvas cleared (black) ✓");
+    }
+  } catch (e) {
+    toast("Clear failed: " + e.message);
+  }
+}
+
+// ── WLED Presets & Live Controls ──────────────────────────────────────────────
+async function openPresetsModal() {
+  document.getElementById("presets-modal").classList.add("open");
+  await loadPresets();
+}
+
+function closePresetsModal() {
+  document.getElementById("presets-modal").classList.remove("open");
+}
+
+async function loadPresets() {
+  const wrap = document.getElementById("presets-list-wrap");
+  wrap.innerHTML = `<div style="text-align:center; color:var(--muted); padding:30px 0;"><div class="loading-spin" style="margin-bottom:8px;"></div><div>Fetching presets from WLED…</div></div>`;
+  try {
+    const res = await fetch("/api/presets");
+    const data = await res.json();
+    if (!data.ok || !data.instances || data.instances.length === 0) {
+      wrap.innerHTML = `<div style="text-align:center; color:var(--muted); padding:20px;">No WLED instances configured.</div>`;
+      return;
+    }
+
+    let html = "";
+    data.instances.forEach(inst => {
+      html += `<div style="margin-bottom:14px;">`;
+      html += `<div style="font-size:0.75rem; font-weight:700; color:var(--accent); margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;">
+        <span>⚡ ${escapeHtml(inst.instanceName || 'WLED')}</span>
+        <span style="font-size:0.7rem; color:var(--muted); font-family:'JetBrains Mono',monospace;">${inst.ip || ''}</span>
+      </div>`;
+
+      if (inst.error) {
+        html += `<div style="font-size:0.75rem; color:var(--warn); padding:8px; background:rgba(231,76,60,0.1); border-radius:6px;">⚠ ${escapeHtml(inst.error)}</div>`;
+      } else if (!inst.presets || inst.presets.length === 0) {
+        html += `<div style="font-size:0.75rem; color:var(--muted); padding:8px; background:var(--panel); border-radius:6px;">No saved presets found on this device.</div>`;
+      } else {
+        html += `<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap:6px;">`;
+        inst.presets.forEach(p => {
+          html += `<button onclick="applyPreset('${inst.instanceId}', ${p.id}, '${escapeHtml(p.name)}')" style="background:var(--panel); border:1px solid var(--border); border-radius:6px; padding:10px 8px; text-align:left; color:var(--text); cursor:pointer; transition:all 0.15s; display:flex; flex-direction:column; gap:3px;">
+            <div style="font-size:0.68rem; color:var(--muted); font-family:'JetBrains Mono',monospace;">#${p.id}</div>
+            <div style="font-size:0.8rem; font-weight:600; color:#fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(p.name)}</div>
+          </button>`;
+        });
+        html += `</div>`;
+      }
+      html += `</div>`;
+    });
+
+    wrap.innerHTML = html;
+  } catch (err) {
+    wrap.innerHTML = `<div style="color:var(--warn); padding:16px;">Error loading presets: ${escapeHtml(err.message)}</div>`;
+  }
+}
+
+async function applyPreset(instanceId, presetId, name) {
+  toast(`Applying preset "${name || presetId}"…`);
+  try {
+    const res = await fetch("/api/presets/apply", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ instanceId, presetId })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      closePresetsModal();
+      if (data.devices) {
+        for (const [id, canvas] of Object.entries(data.devices)) {
+          canvasDevices.set(id, canvas);
+        }
+        applyCanvasStateToDom();
+      }
+      toast(`Applied preset "${name || presetId}" ✓`);
+    } else {
+      toast("Failed to apply preset: " + data.error);
+    }
+  } catch (err) {
+    toast("Error applying preset: " + err.message);
+  }
+}
+
+async function syncWithLights() {
+  toast("Syncing with lights…");
+  try {
+    const res = await fetch("/api/sync-lights", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({})
+    });
+    const data = await res.json();
+    if (data.ok && data.devices) {
+      for (const [id, canvas] of Object.entries(data.devices)) {
+        canvasDevices.set(id, canvas);
+      }
+      applyCanvasStateToDom();
+      toast("Synced from lights ✓");
+    } else {
+      toast("Sync failed: " + (data.error || "No response"));
+    }
+  } catch (err) {
+    toast("Sync error: " + err.message);
+  }
+}
+
+async function releaseLiveMode() {
+  try {
+    const res = await fetch("/api/live/release", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({})
+    });
+    const data = await res.json();
+    if (data.ok) {
+      closePresetsModal();
+      toast("🎮 Returned to regular WLED controls ✓");
+      setTimeout(syncWithLights, 500);
+    } else {
+      toast("Failed to release live: " + data.error);
+    }
+  } catch (err) {
+    toast("Error releasing live: " + err.message);
+  }
+}
+
+function escapeHtml(str) {
+  return String(str || "").replace(/[&<>"']/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[m]));
+}
+
+function toast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 2000);
+}
+
+// ── Real-time SSE Connection ──────────────────────────────────────────────────
+function initSse() {
+  if (evtSource) { evtSource.close(); evtSource = null; }
+  evtSource = new EventSource("/api/events");
+
+  evtSource.addEventListener("bootstrap", e => {
+    try {
+      const data = JSON.parse(e.data);
+      if (data.devices) {
+        for (const [id, canvas] of Object.entries(data.devices)) {
+          canvasDevices.set(id, canvas);
+        }
+      }
+      if (data.house) {
+        houseLayout = data.house;
+        renderHouseScene(houseLayout);
+      }
+      if (data.users) {
+        document.getElementById("user-count").textContent = `👤 ${data.users}`;
+      }
+      setStatus("ok");
+    } catch (err) {
+      console.warn("Bootstrap parse error:", err);
+    }
+  });
+
+  evtSource.addEventListener("delta", e => {
+    try {
+      const changes = JSON.parse(e.data);
+      changes.forEach(ch => {
+        const rgb = [ch.r ?? 0, ch.g ?? 0, ch.b ?? 0];
+        if (ch.elementId !== undefined && ch.pixelIdx !== undefined) {
+          updateDomNodeColor(ch.elementId, ch.pixelIdx, rgb);
+          const nodes = elementLedMap.get(ch.elementId);
+          if (nodes && nodes[ch.pixelIdx]) {
+            nodes[ch.pixelIdx].r = rgb[0];
+            nodes[ch.pixelIdx].g = rgb[1];
+            nodes[ch.pixelIdx].b = rgb[2];
+          }
+        }
+        const devCanvas = canvasDevices.get(ch.instanceId);
+        if (devCanvas && ch.ledIndex !== undefined && ch.ledIndex < devCanvas.length) {
+          devCanvas[ch.ledIndex] = rgb;
+        }
+      });
+    } catch {}
+  });
+
+  evtSource.addEventListener("clear", () => {
+    allLedNodes.forEach(node => {
+      node.r = 0; node.g = 0; node.b = 0;
+      updateDomNodeColor(node.elementId, node.pixelIdx, [0, 0, 0]);
+    });
+  });
+
+  evtSource.addEventListener("devices_sync", e => {
+    try {
+      const data = JSON.parse(e.data);
+      if (data.devices) {
+        for (const [id, canvas] of Object.entries(data.devices)) {
+          canvasDevices.set(id, canvas);
+        }
+        applyCanvasStateToDom();
+      }
+    } catch (err) {
+      console.warn("devices_sync parse error:", err);
+    }
+  });
+
+  evtSource.addEventListener("preset_applied", e => {
+    try {
+      const data = JSON.parse(e.data);
+      if (data.devices) {
+        for (const [id, canvas] of Object.entries(data.devices)) {
+          canvasDevices.set(id, canvas);
+        }
+        applyCanvasStateToDom();
+      }
+      toast(`WLED preset #${data.presetId} active`);
+    } catch {}
+  });
+
+  evtSource.addEventListener("live_released", () => {
+    toast("🎮 Regular WLED controls restored");
+    setTimeout(syncWithLights, 500);
+  });
+
+  evtSource.addEventListener("users", e => {
+    document.getElementById("user-count").textContent = `👤 ${e.data}`;
+  });
+
+  evtSource.addEventListener("config_updated", e => {
+    try {
+      const data = JSON.parse(e.data);
+      if (data.house) {
+        houseLayout = data.house;
+        renderHouseScene(houseLayout);
+      }
+    } catch {}
+  });
+
+  evtSource.onerror = () => {
+    setStatus("error");
+  };
+}
+
+function setStatus(state) {
+  const dot = document.getElementById("status-dot");
+  dot.className = "status-dot " + state;
+}
+
+// ── Initial Bootstrap ─────────────────────────────────────────────────────────
+async function bootstrapApp() {
+  try {
+    const res = await fetch("/api/config");
+    const data = await res.json();
+    if (data.ok && data.config) {
+      appConfig   = data.config;
+      houseLayout = data.config.house;
+      const bri   = data.config.brightness || 128;
+      document.getElementById("desktop-bri-slider").value = bri;
+      document.getElementById("mobile-bri-slider").value = bri;
+      document.getElementById("desktop-bri-val").textContent = bri;
+
+      // Handle View Isolation: Only show view switcher if explicitly enabled
+      const switcher = document.getElementById("header-view-switcher");
+      if (switcher) {
+        switcher.style.display = appConfig.allowViewSwitching ? "flex" : "none";
+      }
+
+      // Default to 1-LED precision mode if singlePixelTap is enabled
+      if (appConfig.singlePixelTap !== false) {
+        setPrecisionMode("single");
+      }
+
+      renderHouseScene(houseLayout);
+    }
+  } catch (err) {
+    console.error("Config fetch error:", err);
+  }
+
+  try {
+    const cRes = await fetch("/api/canvas");
+    const cData = await cRes.json();
+    if (cData.ok && cData.devices) {
+      for (const [id, canvas] of Object.entries(cData.devices)) {
+        canvasDevices.set(id, canvas);
+      }
+      applyCanvasStateToDom();
+    }
+  } catch {}
+
+  initSse();
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  renderPalettes();
+  initPointerHandlers();
+  bootstrapApp();
+});
+</script>
+</body>
+</html>
